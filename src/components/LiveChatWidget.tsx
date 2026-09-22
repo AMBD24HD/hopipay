@@ -66,7 +66,7 @@ export default function LiveChatWidget({
               )}
               <span
                 className={`relative inline-flex rounded-full h-2.5 w-2.5 border border-[#06100c] ${
-                  adminSettings.online ? 'bg-emerald-400' : 'bg-gray-400'
+                  adminSettings.online ? 'bg-emerald-400' : 'bg-rose-500 animate-pulse'
                 }`}
               />
             </span>
@@ -112,7 +112,7 @@ export default function LiveChatWidget({
                     </div>
                     <span
                       className={`absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border border-[#08121a] ${
-                        adminSettings.online ? 'bg-emerald-400 animate-pulse' : 'bg-gray-500'
+                        adminSettings.online ? 'bg-emerald-400 animate-pulse' : 'bg-rose-500 animate-pulse'
                       }`}
                     />
                   </div>
@@ -120,10 +120,12 @@ export default function LiveChatWidget({
                     <h4 className="text-sm font-black text-white flex items-center gap-1.5">
                       অ্যাডমিন সাপোর্ট
                     </h4>
-                    <p className="text-[10px] font-bold flex items-center gap-1.5 text-white/60">
+                    <p className={`text-[10px] font-bold flex items-center gap-1.5 ${
+                      adminSettings.online ? 'text-white/60' : 'text-rose-400 font-bold'
+                    }`}>
                       <span
                         className={`w-1.5 h-1.5 rounded-full ${
-                          adminSettings.online ? 'bg-emerald-400 animate-pulse' : 'bg-gray-400'
+                          adminSettings.online ? 'bg-emerald-400 animate-pulse' : 'bg-rose-500 animate-pulse'
                         }`}
                       />
                       {adminSettings.online
@@ -152,7 +154,7 @@ export default function LiveChatWidget({
                     <p className="font-bold text-emerald-400 text-[10px] mb-1">
                       অ্যাডমিন সাপোর্ট
                     </p>
-                    স্বাগতম! Hopi Pay অ্যাডমিন সাপোর্টে যেকোনো জিজ্ঞাসা বা অর্ডার সমস্যা সম্পর্কে সরাসরি মেসেজ দিন।
+                    স্বাগতম! Velopay অ্যাডমিন সাপোর্টে যেকোনো জিজ্ঞাসা বা অর্ডার সমস্যা সম্পর্কে সরাসরি মেসেজ দিন।
                   </div>
                 </div>
 

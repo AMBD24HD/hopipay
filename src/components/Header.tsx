@@ -69,19 +69,22 @@ export default function Header({
     <header className="sticky top-0 z-[100] ios-glass bg-emerald-950/20 border-b border-emerald-500/15 py-4 px-4 sm:px-8">
       <div className="max-w-7xl mx-auto w-full flex justify-between items-center gap-4">
         {/* Left: Branding & Greeting */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2.5 sm:gap-3">
           <div 
             onClick={() => setView('home')}
-            className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-emerald-500 to-teal-600 flex items-center justify-center text-white shadow-lg active:scale-95 transition cursor-pointer"
+            className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-gradient-to-tr from-emerald-500 to-teal-600 flex items-center justify-center text-white shadow-lg shadow-emerald-500/20 active:scale-95 transition cursor-pointer shrink-0"
           >
             <Bolt className="w-6 h-6 animate-pulse" />
           </div>
-          <div>
-            <span className="text-[10px] font-black text-emerald-400 uppercase tracking-widest block font-sans">
-              {greeting}
-            </span>
-            <span className="text-sm font-black text-white flex items-center gap-1.5 font-mono">
-              <Clock className="w-3.5 h-3.5 text-emerald-400" /> {timeStr}
+          <div onClick={() => setView('home')} className="cursor-pointer">
+            <div className="flex items-center gap-1.5">
+              <span className="text-base sm:text-lg font-black text-white tracking-tight leading-tight">Velopay</span>
+              <span className="text-[10px] font-black text-emerald-400 uppercase tracking-widest hidden sm:inline-block font-sans">
+                • {greeting}
+              </span>
+            </div>
+            <span className="text-xs font-black text-white/70 flex items-center gap-1.5 font-mono">
+              <Clock className="w-3 h-3 text-emerald-400" /> {timeStr}
             </span>
           </div>
         </div>
@@ -125,10 +128,16 @@ export default function Header({
 
         {/* Right: Status Capsule & Auth controls */}
         <div className="flex items-center gap-2 sm:gap-3">
-          {/* Admin Status Capsule */}
-          <div className="px-2.5 py-1.5 sm:px-3.5 sm:py-2 rounded-full flex items-center gap-1.5 sm:gap-2 bg-emerald-500/10 border border-emerald-500/25">
-            <span className={`w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full ${online ? 'bg-emerald-400 animate-pulse' : 'bg-rose-500'}`} />
-            <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-wider text-emerald-400 inline">
+          {/* Admin Status Capsule: Pure Green when Online, Pure Red when Offline */}
+          <div className={`px-2.5 py-1.5 sm:px-3.5 sm:py-2 rounded-full flex items-center gap-1.5 sm:gap-2 border transition-all duration-300 ${
+            online 
+              ? 'bg-emerald-500/15 border-emerald-500/35 text-emerald-400 shadow-sm shadow-emerald-500/10' 
+              : 'bg-rose-500/20 border-rose-500/50 text-rose-400 shadow-sm shadow-rose-500/20'
+          }`}>
+            <span className={`w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full ${online ? 'bg-emerald-400 animate-pulse' : 'bg-rose-500 animate-pulse'}`} />
+            <span className={`text-[9px] sm:text-[10px] font-black uppercase tracking-wider inline ${
+              online ? 'text-emerald-400' : 'text-rose-400'
+            }`}>
               {online ? 'Online' : 'Offline'}
             </span>
           </div>

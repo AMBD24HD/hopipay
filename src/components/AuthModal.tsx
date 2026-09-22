@@ -37,6 +37,7 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, showToast }:
     };
 
     // Store in localStorage
+    localStorage.setItem('velopay_user', JSON.stringify(userData));
     localStorage.setItem('hopi_user', JSON.stringify(userData));
     onAuthSuccess(userData);
     showToast(isSignUp ? 'অ্যাকাউন্ট তৈরি সফল হয়েছে!' : 'লগইন সফল হয়েছে!', 'success');
@@ -49,6 +50,7 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, showToast }:
       email: 'trxrafiff@gmail.com',
       createdAt: new Date().toISOString(),
     };
+    localStorage.setItem('velopay_user', JSON.stringify(demoUser));
     localStorage.setItem('hopi_user', JSON.stringify(demoUser));
     onAuthSuccess(demoUser);
     showToast('ডেমো অ্যাকাউন্ট দিয়ে লগইন করা হয়েছে!', 'success');

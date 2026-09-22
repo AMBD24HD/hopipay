@@ -37,14 +37,14 @@ export default function App() {
   const [view, setView] = useState<'home' | 'order' | 'order-list' | 'profile' | 'admin'>('home');
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [currencies, setCurrencies] = useState<Currency[]>(() => {
-    const saved = localStorage.getItem('hopi_currencies');
+    const saved = localStorage.getItem('velopay_currencies') || localStorage.getItem('hopi_currencies');
     if (saved) {
       try { return JSON.parse(saved); } catch (e) {}
     }
     return INITIAL_CURRENCIES;
   });
   const [settings, setSettings] = useState<AdminSettings>(() => {
-    const saved = localStorage.getItem('hopi_settings');
+    const saved = localStorage.getItem('velopay_settings') || localStorage.getItem('hopi_settings');
     if (saved) {
       try { return JSON.parse(saved); } catch (e) {}
     }
@@ -52,7 +52,7 @@ export default function App() {
   });
   const [orders, setOrders] = useState<Order[]>([]);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>(() => {
-    const saved = localStorage.getItem('hopi_chat_messages');
+    const saved = localStorage.getItem('velopay_chat_messages') || localStorage.getItem('hopi_chat_messages');
     if (saved) {
       try { return JSON.parse(saved); } catch (e) {}
     }
@@ -64,9 +64,8 @@ export default function App() {
   
   // Admin PIN Authentication state
   const [isAdminAuthenticated, setIsAdminAuthenticated] = useState<boolean>(() => {
-    return sessionStorage.getItem('hopi_admin_auth') === 'true';
+    return sessionStorage.getItem('velopay_admin_auth') === 'true' || sessionStorage.getItem('hopi_admin_auth') === 'true';
   });
-  const [isAdminPinModalOpen, setIsAdminPinModalOpen] = useState(false);
   const [enteredPin, setEnteredPin] = useState('');
 
   // Modals & Feedback
@@ -88,31 +87,32 @@ export default function App() {
 
   // Sync state to localStorage
   useEffect(() => {
-    localStorage.setItem('hopi_currencies', JSON.stringify(currencies));
+    localStorage.setItem('velopay_currencies', JSON.stringify(currencies));
   }, [currencies]);
 
   useEffect(() => {
-    localStorage.setItem('hopi_settings', JSON.stringify(settings));
+    localStorage.setItem('velopay_settings', JSON.stringify(settings));
   }, [settings]);
 
   useEffect(() => {
-    localStorage.setItem('hopi_chat_messages', JSON.stringify(chatMessages));
+    localStorage.setItem('velopay_chat_messages', JSON.stringify(chatMessages));
   }, [chatMessages]);
 
   // Load state from localStorage on init
   useEffect(() => {
     // Current User
-    const storedUser = localStorage.getItem('hopi_user');
+    const storedUser = localStorage.getItem('velopay_user') || localStorage.getItem('hopi_user');
     if (storedUser) {
       try {
         setCurrentUser(JSON.parse(storedUser));
       } catch (e) {
+        localStorage.removeItem('velopay_user');
         localStorage.removeItem('hopi_user');
       }
     }
 
     // Orders
-    const storedOrders = localStorage.getItem('hopi_orders');
+    const storedOrders = localStorage.getItem('velopay_orders') || localStorage.getItem('hopi_orders');
     if (storedOrders) {
       try {
         setOrders(JSON.parse(storedOrders));
@@ -139,19 +139,20 @@ export default function App() {
         }
       ];
       setOrders(seedOrders);
-      localStorage.setItem('hopi_orders', JSON.stringify(seedOrders));
+      localStorage.setItem('velopay_orders', JSON.stringify(seedOrders));
     }
   }, []);
 
   // Sync and listen to URL hash #admin for separate Admin panel access
   useEffect(() => {
     const checkHash = () => {
-      if (window.location.hash === '#admin') {
-        if (sessionStorage.getItem('hopi_admin_auth') === 'true') {
+      const hash = window.location.hash;
+      if (hash === '#admin' || hash === '#/admin' || hash === '#admin-portal') {
+        setView('admin');
+        if (sessionStorage.getItem('velopay_admin_auth') === 'true' || sessionStorage.getItem('hopi_admin_auth') === 'true') {
           setIsAdminAuthenticated(true);
-          setView('admin');
         } else {
-          setIsAdminPinModalOpen(true);
+          setIsAdminAuthenticated(false);
         }
       }
     };
@@ -163,20 +164,34 @@ export default function App() {
   // Save orders to localStorage on change
   useEffect(() => {
     if (orders.length > 0) {
-      localStorage.setItem('hopi_orders', JSON.stringify(orders));
+      localStorage.setItem('velopay_orders', JSON.stringify(orders));
     }
   }, [orders]);
 
-  // Handle Admin Access Verification
+  // Handle Admin Access Verification & Navigation
   const handleOpenAdmin = () => {
-    if (isAdminAuthenticated) {
-      setView('admin');
-      if (window.location.hash !== '#admin') {
-        window.location.hash = 'admin';
-      }
-    } else {
-      setIsAdminPinModalOpen(true);
+    setView('admin');
+    if (!window.location.hash.startsWith('#admin')) {
+      window.location.hash = 'admin';
     }
+  };
+
+  const handleCloseAdmin = () => {
+    setView('home');
+    if (window.location.hash.startsWith('#admin')) {
+      history.replaceState(null, '', window.location.pathname);
+    }
+  };
+
+  const handleAdminLogout = () => {
+    setIsAdminAuthenticated(false);
+    sessionStorage.removeItem('velopay_admin_auth');
+    sessionStorage.removeItem('hopi_admin_auth');
+    setView('home');
+    if (window.location.hash.startsWith('#admin')) {
+      history.replaceState(null, '', window.location.pathname);
+    }
+    showToast('অ্যাডমিন প্যানেল থেকে সফলভাবে লগআউট হয়েছেন!', 'info');
   };
 
   const handleVerifyPin = (e: React.FormEvent) => {
@@ -184,8 +199,7 @@ export default function App() {
     const correctPin = settings.adminPin || '1234';
     if (enteredPin.trim() === correctPin || enteredPin.trim() === '1234') {
       setIsAdminAuthenticated(true);
-      sessionStorage.setItem('hopi_admin_auth', 'true');
-      setIsAdminPinModalOpen(false);
+      sessionStorage.setItem('velopay_admin_auth', 'true');
       setEnteredPin('');
       setView('admin');
       window.location.hash = 'admin';
@@ -196,6 +210,10 @@ export default function App() {
   };
 
   const handleStartExchange = (currencyId: string, type: 'buy' | 'sell' = 'sell') => {
+    if (!settings.online) {
+      showToast('Velopay বর্তমানে অফলাইন রয়েছে। অ্যাডমিন অনলাইন না হওয়া পর্যন্ত নতুন অর্ডার সাময়িকভাবে বন্ধ আছে।', 'error');
+      return;
+    }
     setSelectedCurrencyId(currencyId);
     setSelectedOrderType(type);
     if (!currentUser) {
@@ -227,6 +245,7 @@ export default function App() {
   };
 
   const handleSignOut = () => {
+    localStorage.removeItem('velopay_user');
     localStorage.removeItem('hopi_user');
     setCurrentUser(null);
     setView('home');
@@ -236,7 +255,7 @@ export default function App() {
     if (!currentUser) return;
     const updatedUser: User = { ...currentUser, avatar: avatarUrl };
     setCurrentUser(updatedUser);
-    localStorage.setItem('hopi_user', JSON.stringify(updatedUser));
+    localStorage.setItem('velopay_user', JSON.stringify(updatedUser));
   };
 
   const checkAuthAndShow = (targetView: 'order' | 'order-list' | 'profile' | 'admin') => {
@@ -258,7 +277,7 @@ export default function App() {
       id: 'msg-' + Date.now(),
       sender: 'user',
       senderName: currentUser?.name || 'কাস্টমার',
-      userEmail: currentUser?.email || 'guest@hopipay.com',
+      userEmail: currentUser?.email || 'guest@velopay.com',
       text,
       time: new Date().toISOString(),
       read: false
@@ -272,7 +291,7 @@ export default function App() {
           id: 'reply-' + Date.now(),
           sender: 'admin',
           senderName: 'অ্যাডমিন সাপোর্ট',
-          userEmail: 'support@hopipay.com',
+          userEmail: 'support@velopay.com',
           text: 'ধন্যবাদ! অ্যাডমিন বর্তমানে অফলাইনে আছেন। আপনার মেসেজ সংরক্ষিত হয়েছে, অনলাইনে এসে দ্রুত রিপ্লাই দেয়া হবে। জরুরি প্রয়োজনে হোয়াটসঅ্যাপে মেসেজ করুন।',
           time: new Date().toISOString(),
           read: true
@@ -287,13 +306,101 @@ export default function App() {
       id: 'msg-' + Date.now(),
       sender: 'admin',
       senderName: 'অ্যাডমিন',
-      userEmail: 'admin@hopipay.com',
+      userEmail: 'admin@velopay.com',
       text,
       time: new Date().toISOString(),
       read: true
     };
     setChatMessages(prev => [...prev, newMsg]);
   };
+
+  if (view === 'admin') {
+    return (
+      <div className="min-h-screen flex flex-col relative overflow-hidden bg-[#070e0a] text-white">
+        {/* Exquisite Glowing Forest Background Blobs (iOS Style) */}
+        <div className="absolute top-[-10%] left-[-10%] w-[50vw] h-[50vw] rounded-full bg-emerald-500/10 blur-[130px] pointer-events-none" />
+        <div className="absolute bottom-[-10%] right-[-10%] w-[45vw] h-[45vw] rounded-full bg-teal-500/10 blur-[140px] pointer-events-none" />
+
+        {/* Floating Push-notification Toasts */}
+        <Toast toasts={toasts} onRemove={removeToast} />
+
+        {isAdminAuthenticated ? (
+          <div className="max-w-7xl mx-auto w-full px-4 sm:px-8 py-8 flex-1 relative z-10">
+            <AdminPanel
+              currencies={currencies}
+              orders={orders}
+              adminSettings={settings}
+              chatMessages={chatMessages}
+              onUpdateCurrencies={setCurrencies}
+              onUpdateOrders={setOrders}
+              onUpdateSettings={setSettings}
+              onSendAdminChatMessage={handleAdminSendChatMessage}
+              onCloseAdmin={handleCloseAdmin}
+              onLogoutAdmin={handleAdminLogout}
+              showToast={showToast}
+            />
+          </div>
+        ) : (
+          <div className="min-h-screen flex items-center justify-center p-4 relative z-10">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.25 }}
+              className="ios-glass p-8 sm:p-10 rounded-3xl border border-emerald-500/30 w-full max-w-md bg-[#0a1410]/95 text-white shadow-2xl space-y-6"
+            >
+              <div className="text-center space-y-3">
+                <div className="w-16 h-16 mx-auto rounded-3xl bg-gradient-to-tr from-emerald-500 to-teal-600 flex items-center justify-center text-white shadow-lg shadow-emerald-500/25">
+                  <Shield className="w-8 h-8" />
+                </div>
+                <div>
+                  <h2 className="text-2xl font-black text-white tracking-tight">Velopay অ্যাডমিন পোর্টাল</h2>
+                  <p className="text-xs text-white/60 mt-1 leading-relaxed">
+                    এই প্যানেলটি শুধুমাত্র অনুমোদিত অ্যাডমিনের জন্য। সাইটের রেট, কারেন্সি ও অর্ডার নিয়ন্ত্রণ করতে আপনার গোপন পিন দিন।
+                  </p>
+                </div>
+                <div className="inline-block px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/25 text-emerald-400 text-xs font-semibold">
+                  ডিফল্ট অ্যাডমিন পিন: <span className="font-mono font-bold">1234</span>
+                </div>
+              </div>
+
+              <form onSubmit={handleVerifyPin} className="space-y-4">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-white/70 block">অ্যাডমিন সিকিউরিটি পিন</label>
+                  <div className="relative">
+                    <Key className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-emerald-400" />
+                    <input
+                      type="password"
+                      autoFocus
+                      placeholder="পিন লিখুন (যেমন: 1234)"
+                      value={enteredPin}
+                      onChange={(e) => setEnteredPin(e.target.value)}
+                      className="w-full pl-11 pr-4 py-3.5 rounded-2xl bg-white/5 border border-white/15 text-center text-xl font-black tracking-widest text-emerald-400 focus:outline-none focus:border-emerald-500 transition"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex gap-2.5 pt-1">
+                  <button
+                    type="button"
+                    onClick={handleCloseAdmin}
+                    className="flex-1 py-3.5 rounded-2xl bg-white/5 hover:bg-white/10 text-xs font-bold text-white/70 hover:text-white transition cursor-pointer border border-white/10"
+                  >
+                    ইউজার সাইটে ফিরুন
+                  </button>
+                  <button
+                    type="submit"
+                    className="flex-1 py-3.5 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-xs font-black text-white transition cursor-pointer shadow-lg shadow-emerald-500/20"
+                  >
+                    লগইন করুন
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col relative overflow-hidden bg-[#070e0a]">
@@ -317,46 +424,24 @@ export default function App() {
         onOpenAdmin={handleOpenAdmin}
       />
 
-      {/* Premium notice Marquee bar */}
-      <div className="bg-emerald-500/10 border-y border-emerald-500/15 py-3 overflow-hidden select-none">
-        <div className="marquee-scroller text-xs sm:text-sm font-semibold tracking-wide text-emerald-400 gap-16">
-          <span>{settings.notice}</span>
-          <span>{settings.notice}</span>
-          <span>{settings.notice}</span>
+      {/* Premium notice Marquee bar with dynamic Online (green) / Offline (red) style */}
+      <div className={`border-y py-3 overflow-hidden select-none transition-colors duration-300 ${
+        settings.online
+          ? 'bg-emerald-500/10 border-emerald-500/15 text-emerald-400'
+          : 'bg-rose-500/15 border-rose-500/35 text-rose-400'
+      }`}>
+        <div className={`marquee-scroller text-xs sm:text-sm font-semibold tracking-wide gap-16 ${
+          settings.online ? 'text-emerald-400' : 'text-rose-400 font-bold'
+        }`}>
+          <span>{settings.online ? settings.notice : `⚠️ Velopay বর্তমানে অফলাইন রয়েছে। নতুন অর্ডার গ্রহণ সাময়িকভাবে স্থগিত আছে। ${settings.notice}`}</span>
+          <span>{settings.online ? settings.notice : `⚠️ Velopay বর্তমানে অফলাইন রয়েছে। নতুন অর্ডার গ্রহণ সাময়িকভাবে স্থগিত আছে। ${settings.notice}`}</span>
+          <span>{settings.online ? settings.notice : `⚠️ Velopay বর্তমানে অফলাইন রয়েছে। নতুন অর্ডার গ্রহণ সাময়িকভাবে স্থগিত আছে। ${settings.notice}`}</span>
         </div>
       </div>
 
       {/* Main Container Viewport */}
       <main className="max-w-7xl mx-auto w-full px-4 sm:px-8 py-8 pb-32 md:pb-16 flex-1 relative z-10">
         <AnimatePresence mode="wait">
-          {view === 'admin' && (
-            <motion.div
-              key="admin"
-              initial={{ opacity: 0, scale: 0.98 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.98 }}
-              transition={{ duration: 0.25 }}
-            >
-              <AdminPanel
-                currencies={currencies}
-                orders={orders}
-                adminSettings={settings}
-                chatMessages={chatMessages}
-                onUpdateCurrencies={setCurrencies}
-                onUpdateOrders={setOrders}
-                onUpdateSettings={setSettings}
-                onSendAdminChatMessage={handleAdminSendChatMessage}
-                onCloseAdmin={() => {
-                  setView('home');
-                  if (window.location.hash === '#admin') {
-                    history.replaceState(null, '', window.location.pathname);
-                  }
-                }}
-                showToast={showToast}
-              />
-            </motion.div>
-          )}
-
           {view === 'home' && (
             <motion.div
               key="home"
@@ -364,8 +449,33 @@ export default function App() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -15 }}
               transition={{ duration: 0.3 }}
-              className="space-y-12"
+              className="space-y-8 sm:space-y-12"
             >
+              {/* Prominent Offline Alert Banner if Admin turned site offline */}
+              {!settings.online && (
+                <div className="bg-rose-500/15 border-2 border-rose-500/40 p-4 sm:p-5 rounded-3xl flex flex-col sm:flex-row items-center justify-between gap-4 text-rose-300 shadow-xl shadow-rose-950/40">
+                  <div className="flex items-center gap-3 text-center sm:text-left">
+                    <span className="w-3.5 h-3.5 rounded-full bg-rose-500 animate-ping shrink-0" />
+                    <div>
+                      <h4 className="text-rose-400 font-black text-sm sm:text-base">
+                        Velopay বর্তমানে অফলাইন রয়েছে (Offline)
+                      </h4>
+                      <p className="text-xs text-rose-300/80 font-medium">
+                        অ্যাডমিন অফলাইনে থাকার কারণে নতুন অর্ডার প্রসেসিং সাময়িকভাবে স্থগিত আছে। অ্যাডমিন অনলাইনে আসলে পুনরায় অর্ডার করতে পারবেন।
+                      </p>
+                    </div>
+                  </div>
+                  <a
+                    href={`https://wa.me/${settings.whatsapp.replace(/[^0-9]/g, '')}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="shrink-0 px-4 py-2 rounded-xl bg-rose-500/20 border border-rose-500/40 text-rose-300 text-xs font-bold hover:bg-rose-500/30 transition flex items-center gap-2"
+                  >
+                    হোয়াটসঅ্যাপে যোগাযোগ
+                  </a>
+                </div>
+              )}
+
               {/* Hero Banner Grid Stats */}
               <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
                 <div className="md:col-span-7 space-y-4">
@@ -373,7 +483,7 @@ export default function App() {
                     <ShieldCheck className="w-4 h-4" /> ১০০% নিরাপদ ও বিশ্বস্ত এক্সচেঞ্জ
                   </div>
                   <h1 className="text-4xl sm:text-5xl font-black text-white tracking-tight leading-none">
-                    হোপি পে — <span className="text-emerald-400">বাই ও সেল</span>
+                    Velopay — <span className="text-emerald-400">বাই ও সেল</span>
                   </h1>
                   <p className="text-sm sm:text-base text-white/70 font-medium leading-relaxed max-w-xl">
                     ফ্রিল্যান্সিং পেমেন্ট, ক্রিপ্টোকারেন্সি এবং ডিজিটাল ওয়ালেটের ডলার ৫-১০ মিনিটে বাংলাদেশি টাকায় বাই এবং সেল করুন সম্পূর্ণ বিশ্বস্ততার সাথে।
@@ -542,70 +652,6 @@ export default function App() {
         adminSettings={settings}
         currentUser={currentUser ? { name: currentUser.name, email: currentUser.email } : null}
       />
-
-      {/* Admin Security PIN Modal */}
-      <AnimatePresence>
-        {isAdminPinModalOpen && (
-          <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="ios-glass p-6 sm:p-8 rounded-3xl border border-emerald-500/30 w-full max-w-sm bg-[#0a1120] text-white shadow-2xl"
-            >
-              <div className="flex justify-between items-center mb-4">
-                <div className="flex items-center gap-2 text-emerald-400">
-                  <Lock className="w-5 h-5" />
-                  <h3 className="font-black text-lg text-white">অ্যাডমিন সিকিউরিটি পিন</h3>
-                </div>
-                <button
-                  onClick={() => setIsAdminPinModalOpen(false)}
-                  className="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-white/60 hover:text-white"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-
-              <p className="text-xs text-white/60 mb-5 leading-relaxed">
-                অ্যাডমিন প্যানেল সুরক্ষিত রাখতে আপনার পিন কোডটি প্রবেশ করান। <br />
-                <span className="text-emerald-400 font-bold">(ডিফল্ট অ্যাডমিন পিন: 1234)</span>
-              </p>
-
-              <form onSubmit={handleVerifyPin} className="space-y-4">
-                <div className="relative">
-                  <Key className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-emerald-400" />
-                  <input
-                    type="password"
-                    autoFocus
-                    placeholder="পিন লিখুন (যেমন: 1234)"
-                    value={enteredPin}
-                    onChange={(e) => setEnteredPin(e.target.value)}
-                    className="w-full pl-11 pr-4 py-3 rounded-xl bg-white/5 border border-white/15 text-center text-lg font-black tracking-widest text-emerald-400 focus:outline-none focus:border-emerald-500"
-                  />
-                </div>
-
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setEnteredPin('1234');
-                    }}
-                    className="flex-1 py-3 rounded-xl bg-white/10 hover:bg-white/15 text-xs font-bold text-white transition cursor-pointer"
-                  >
-                    1234 অটো ফিল
-                  </button>
-                  <button
-                    type="submit"
-                    className="flex-1 py-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-xs font-black text-white transition cursor-pointer shadow-lg shadow-emerald-500/20"
-                  >
-                    আনলক করুন
-                  </button>
-                </div>
-              </form>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
 
       {/* Auth Modal Container Popup */}
       <AuthModal 

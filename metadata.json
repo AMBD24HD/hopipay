@@ -1,6 +1,6 @@
 {
-  "name": "Hopi Pay - Premium Exchange",
-  "description": "Premium dollar exchange platform with an immersive iOS glassmorphic theme and high-contrast green accents.",
+  "name": "Velopay - Premium Exchange",
+  "description": "Velopay - Premium dollar exchange platform with an immersive iOS glassmorphic theme and high-contrast green accents.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

@@ -43,6 +43,7 @@ interface AdminPanelProps {
   onUpdateSettings: (settings: AdminSettings) => void;
   onSendAdminChatMessage: (text: string, userEmail?: string) => void;
   onCloseAdmin: () => void;
+  onLogoutAdmin?: () => void;
   showToast: (text: string, type: 'success' | 'error' | 'info') => void;
 }
 
@@ -66,6 +67,7 @@ export default function AdminPanel({
   onUpdateSettings,
   onSendAdminChatMessage,
   onCloseAdmin,
+  onLogoutAdmin,
   showToast
 }: AdminPanelProps) {
   const [activeTab, setActiveTab] = useState<'currencies' | 'orders' | 'settings' | 'chat'>('currencies');
@@ -195,7 +197,7 @@ export default function AdminPanel({
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight">Hopi Pay অ্যাডমিন প্যানেল</h2>
+              <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight">Velopay অ্যাডমিন প্যানেল</h2>
               <span className="text-[10px] font-black px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 uppercase">
                 Control Portal
               </span>
@@ -206,28 +208,43 @@ export default function AdminPanel({
 
         {/* 1-Tap Online/Offline Switch & User View Button */}
         <div className="flex items-center gap-3 w-full md:w-auto justify-between md:justify-end">
-          {/* 1-Tap Toggle */}
+          {/* 1-Tap Toggle: All Green when Online, All Red when Offline */}
           <button
             onClick={handleToggleOnline}
-            className={`px-4 py-2.5 rounded-2xl font-black text-xs flex items-center gap-2 transition cursor-pointer border shadow-md active:scale-95 ${
+            className={`px-4 py-2.5 rounded-2xl font-black text-xs flex items-center gap-2 transition cursor-pointer border shadow-md active:scale-95 duration-200 ${
               adminSettings.online 
-                ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-400 hover:bg-emerald-500/25' 
-                : 'bg-rose-500/15 border-rose-500/40 text-rose-400 hover:bg-rose-500/25'
+                ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-400 hover:bg-emerald-500/25 shadow-emerald-500/10' 
+                : 'bg-rose-500/20 border-rose-500/50 text-rose-400 hover:bg-rose-500/30 shadow-rose-500/20'
             }`}
           >
-            <Power className="w-4 h-4" />
-            <span>স্ট্যাটাস: {adminSettings.online ? 'অনলাইন (Active)' : 'অফলাইন (Inactive)'}</span>
-            <span className={`w-2.5 h-2.5 rounded-full ${adminSettings.online ? 'bg-emerald-400 animate-ping' : 'bg-rose-400'}`} />
+            <Power className={`w-4 h-4 ${adminSettings.online ? 'text-emerald-400' : 'text-rose-400'}`} />
+            <span className={adminSettings.online ? 'text-emerald-400' : 'text-rose-400'}>
+              স্ট্যাটাস: {adminSettings.online ? 'অনলাইন (Active)' : 'অফলাইন (Inactive)'}
+            </span>
+            <span className={`w-2.5 h-2.5 rounded-full ${adminSettings.online ? 'bg-emerald-400 animate-ping' : 'bg-rose-500 animate-pulse'}`} />
           </button>
 
           {/* Switch to User View */}
           <button
             onClick={onCloseAdmin}
             className="px-4 py-2.5 rounded-2xl bg-white/10 hover:bg-white/15 text-white font-bold text-xs flex items-center gap-2 transition cursor-pointer border border-white/10 active:scale-95"
+            title="মূল ইউজার ওয়েবসাইটে ফিরে যান"
           >
-            <span>ইউজার ভিউ দেখুন</span>
-            <ExternalLink className="w-3.5 h-3.5" />
+            <span>ইউজার সাইট দেখুন</span>
+            <ExternalLink className="w-3.5 h-3.5 text-emerald-400" />
           </button>
+
+          {/* Admin Logout */}
+          {onLogoutAdmin && (
+            <button
+              onClick={onLogoutAdmin}
+              className="px-3.5 py-2.5 rounded-2xl bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 border border-rose-500/30 font-bold text-xs flex items-center gap-1.5 transition cursor-pointer active:scale-95"
+              title="অ্যাডমিন প্যানেল থেকে লগআউট করুন"
+            >
+              <Power className="w-3.5 h-3.5 text-rose-400" />
+              <span>লগআউট</span>
+            </button>
+          )}
         </div>
       </div>
 
