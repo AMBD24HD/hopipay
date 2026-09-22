@@ -424,18 +424,12 @@ export default function App() {
         onOpenAdmin={handleOpenAdmin}
       />
 
-      {/* Premium notice Marquee bar with dynamic Online (green) / Offline (red) style */}
-      <div className={`border-y py-3 overflow-hidden select-none transition-colors duration-300 ${
-        settings.online
-          ? 'bg-emerald-500/10 border-emerald-500/15 text-emerald-400'
-          : 'bg-rose-500/15 border-rose-500/35 text-rose-400'
-      }`}>
-        <div className={`marquee-scroller text-xs sm:text-sm font-semibold tracking-wide gap-16 ${
-          settings.online ? 'text-emerald-400' : 'text-rose-400 font-bold'
-        }`}>
-          <span>{settings.online ? settings.notice : `⚠️ Velopay বর্তমানে অফলাইন রয়েছে। নতুন অর্ডার গ্রহণ সাময়িকভাবে স্থগিত আছে। ${settings.notice}`}</span>
-          <span>{settings.online ? settings.notice : `⚠️ Velopay বর্তমানে অফলাইন রয়েছে। নতুন অর্ডার গ্রহণ সাময়িকভাবে স্থগিত আছে। ${settings.notice}`}</span>
-          <span>{settings.online ? settings.notice : `⚠️ Velopay বর্তমানে অফলাইন রয়েছে। নতুন অর্ডার গ্রহণ সাময়িকভাবে স্থগিত আছে। ${settings.notice}`}</span>
+      {/* Premium notice Marquee bar (normal styling for both online & offline) */}
+      <div className="bg-emerald-500/10 border-y border-emerald-500/15 py-3 overflow-hidden select-none">
+        <div className="marquee-scroller text-xs sm:text-sm font-semibold tracking-wide text-emerald-400 gap-16">
+          <span>{settings.notice}</span>
+          <span>{settings.notice}</span>
+          <span>{settings.notice}</span>
         </div>
       </div>
 
