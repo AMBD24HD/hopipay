@@ -468,14 +468,9 @@ export default function App() {
 
                       {/* Text details - Pure Red Color Scheme */}
                       <div className="space-y-1.5">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <h4 className="text-sm sm:text-base font-black text-rose-400 tracking-tight">
-                            Velopay বর্তমানে অফলাইন রয়েছে (Offline)
-                          </h4>
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-rose-500/25 text-rose-300 border border-rose-500/50">
-                            অস্থগিত
-                          </span>
-                        </div>
+                        <h4 className="text-sm sm:text-base font-black text-rose-400 tracking-tight">
+                          Velopay বর্তমানে অফলাইন রয়েছে (Offline)
+                        </h4>
                         <p className="text-xs sm:text-sm text-rose-200/90 font-medium leading-relaxed">
                           অ্যাডমিন অফলাইনে থাকার কারণে নতুন অর্ডার প্রসেসিং সাময়িকভাবে স্থগিত আছে। অ্যাডমিন অনলাইনে আসলে পুনরায় অর্ডার করতে পারবেন।
                         </p>
