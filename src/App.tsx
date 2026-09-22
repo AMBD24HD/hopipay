@@ -448,51 +448,51 @@ export default function App() {
             >
               {/* Prominent Offline Alert Banner if Admin turned site offline */}
               {!settings.online && (
-                <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl border border-rose-500/30 bg-gradient-to-br from-[#1e070c]/90 via-[#150508]/95 to-[#0e0305]/95 backdrop-blur-xl p-4 sm:p-6 shadow-2xl shadow-rose-950/60 transition-all">
-                  {/* Subtle decorative glow */}
-                  <div className="absolute -top-10 -right-10 w-28 h-28 bg-rose-500/15 rounded-full blur-2xl pointer-events-none" />
+                <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl border-2 border-rose-500/50 bg-gradient-to-br from-[#26050b]/95 via-[#1a0407]/95 to-[#120204]/95 backdrop-blur-xl p-4 sm:p-6 shadow-2xl shadow-rose-950/70 transition-all">
+                  {/* Subtle decorative red glow */}
+                  <div className="absolute -top-10 -right-10 w-32 h-32 bg-rose-500/20 rounded-full blur-2xl pointer-events-none" />
                   
                   <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 sm:gap-5 relative z-10">
                     {/* Content Block */}
                     <div className="flex items-start gap-3 sm:gap-4">
-                      {/* Alert Icon Box with Ping Indicator */}
+                      {/* Alert Icon Box with Red Ping Indicator */}
                       <div className="relative shrink-0 mt-0.5">
-                        <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl sm:rounded-2xl bg-rose-500/15 border border-rose-500/35 flex items-center justify-center text-rose-400 shadow-md shadow-rose-950/40">
+                        <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl sm:rounded-2xl bg-rose-500/20 border border-rose-500/40 flex items-center justify-center text-rose-400 shadow-md shadow-rose-950/50">
                           <AlertCircle className="w-5 h-5 sm:w-6 sm:h-6" />
                         </div>
                         <span className="absolute -top-1 -right-1 flex h-3 w-3">
-                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75" />
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-80" />
                           <span className="relative inline-flex rounded-full h-3 w-3 bg-rose-500" />
                         </span>
                       </div>
 
-                      {/* Text details */}
-                      <div className="space-y-1">
+                      {/* Text details - Pure Red Color Scheme */}
+                      <div className="space-y-1.5">
                         <div className="flex flex-wrap items-center gap-2">
-                          <h4 className="text-sm sm:text-base font-black text-white tracking-tight">
+                          <h4 className="text-sm sm:text-base font-black text-rose-400 tracking-tight">
                             Velopay বর্তমানে অফলাইন রয়েছে (Offline)
                           </h4>
-                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-rose-500/20 text-rose-300 border border-rose-500/40">
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-rose-500/25 text-rose-300 border border-rose-500/50">
                             অস্থগিত
                           </span>
                         </div>
-                        <p className="text-xs sm:text-sm text-white/70 font-normal leading-relaxed">
+                        <p className="text-xs sm:text-sm text-rose-200/90 font-medium leading-relaxed">
                           অ্যাডমিন অফলাইনে থাকার কারণে নতুন অর্ডার প্রসেসিং সাময়িকভাবে স্থগিত আছে। অ্যাডমিন অনলাইনে আসলে পুনরায় অর্ডার করতে পারবেন।
                         </p>
                       </div>
                     </div>
 
-                    {/* WhatsApp Action Button - Full width on Mobile, Auto on Desktop */}
+                    {/* WhatsApp Action Button - Pure Red Color */}
                     <div className="pt-1 md:pt-0 shrink-0">
                       <a
                         href={`https://wa.me/${settings.whatsapp.replace(/[^0-9]/g, '')}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="group w-full md:w-auto px-5 py-3 sm:py-3.5 rounded-xl sm:rounded-2xl bg-gradient-to-r from-emerald-600 via-emerald-500 to-teal-500 hover:from-emerald-500 hover:to-teal-400 text-white font-bold text-xs sm:text-sm transition-all duration-200 active:scale-[0.98] flex items-center justify-center gap-2.5 shadow-lg shadow-emerald-950/50 border border-emerald-400/30"
+                        className="group w-full md:w-auto px-5 py-3 sm:py-3.5 rounded-xl sm:rounded-2xl bg-gradient-to-r from-rose-600 via-rose-500 to-red-600 hover:from-rose-500 hover:to-red-500 text-white font-bold text-xs sm:text-sm transition-all duration-200 active:scale-[0.98] flex items-center justify-center gap-2.5 shadow-lg shadow-rose-950/60 border border-rose-400/40"
                       >
-                        <MessageCircle className="w-4 h-4 fill-white/20 shrink-0" />
-                        <span>হোয়াটসঅ্যাপে যোগাযোগ</span>
-                        <ArrowRight className="w-3.5 h-3.5 opacity-70 group-hover:translate-x-1 transition-transform shrink-0" />
+                        <MessageCircle className="w-4 h-4 fill-white/20 shrink-0 text-white" />
+                        <span className="font-black tracking-wide">হোয়াটসঅ্যাপে যোগাযোগ</span>
+                        <ArrowRight className="w-3.5 h-3.5 opacity-80 group-hover:translate-x-1 transition-transform shrink-0" />
                       </a>
                     </div>
                   </div>
