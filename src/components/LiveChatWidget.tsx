@@ -41,38 +41,44 @@ export default function LiveChatWidget({
 
   return (
     <>
-      {/* Floating Chat Trigger Button - Fixed & elevated above mobile navigation (where WhatsApp used to be) */}
-      <div className="fixed bottom-28 md:bottom-8 right-4 sm:right-6 z-40">
+      {/* Floating Chat Trigger Button - Placed on the right side and slightly higher as requested */}
+      <div className="fixed bottom-28 sm:bottom-30 md:bottom-10 right-4 sm:right-6 z-40">
         <motion.button
           whileHover={{ scale: 1.04 }}
           whileTap={{ scale: 0.95 }}
           onClick={() => setIsOpen(!isOpen)}
           aria-label="অ্যাডমিন সাপোর্ট"
           id="admin-support-chat-button"
-          className="relative px-4 py-2.5 sm:px-5 sm:py-3 rounded-full bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-500 hover:from-emerald-500 hover:to-teal-500 text-white shadow-2xl shadow-emerald-950/60 flex items-center gap-2.5 border border-emerald-300/30 backdrop-blur-md cursor-pointer select-none transition-all duration-200"
+          className="relative px-3.5 py-2.5 sm:px-4 sm:py-3 rounded-full bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-500 hover:from-emerald-500 hover:to-teal-500 text-white shadow-2xl shadow-emerald-950/70 flex items-center gap-2 border border-emerald-300/35 backdrop-blur-md cursor-pointer select-none transition-all duration-200"
         >
-          {/* Icon with Online Pulse */}
-          <div className="relative flex items-center justify-center">
-            {isOpen ? (
-              <X className="w-5 h-5 text-white" />
-            ) : (
-              <Headphones className="w-5 h-5 text-white" />
-            )}
-
-            {/* Glowing online indicator */}
-            <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
-              {adminSettings.online && (
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-300 opacity-75"></span>
+          {/* Light Dot and Headphone Icon together (closely placed with gap-1.5) */}
+          <div className="flex items-center gap-1.5 shrink-0">
+            {/* 1. Green / Red status light (ota faste, close to icon) */}
+            <span className="relative flex h-2 w-2 sm:h-2.5 sm:w-2.5 shrink-0 items-center justify-center">
+              {adminSettings.online ? (
+                <>
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-300 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-2 w-2 sm:h-2.5 sm:w-2.5 bg-emerald-400 shadow-sm shadow-emerald-400" />
+                </>
+              ) : (
+                <>
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-70" />
+                  <span className="relative inline-flex rounded-full h-2 w-2 sm:h-2.5 sm:w-2.5 bg-rose-500 shadow-sm shadow-rose-500" />
+                </>
               )}
-              <span
-                className={`relative inline-flex rounded-full h-2.5 w-2.5 border border-[#06100c] ${
-                  adminSettings.online ? 'bg-emerald-400' : 'bg-rose-500 animate-pulse'
-                }`}
-              />
             </span>
+
+            {/* 2. Headphone Icon */}
+            <div className="shrink-0 flex items-center justify-center">
+              {isOpen ? (
+                <X className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+              ) : (
+                <Headphones className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+              )}
+            </div>
           </div>
 
-          {/* Bengali text: অ্যাডমিন সাপোর্ট */}
+          {/* 3. Bengali text: অ্যাডমিন সাপোর্ট */}
           <span className="text-xs sm:text-sm font-black tracking-wide whitespace-nowrap drop-shadow-sm">
             অ্যাডমিন সাপোর্ট
           </span>
@@ -92,16 +98,17 @@ export default function LiveChatWidget({
           <>
             {/* Mobile Backdrop overlay to prevent background scroll confusion on small screens */}
             <div 
-              className="fixed inset-0 bg-black/40 backdrop-blur-xs z-45 md:hidden"
+              className="fixed inset-0 bg-black/50 backdrop-blur-xs z-45 md:hidden"
               onClick={() => setIsOpen(false)}
             />
 
+            {/* Chat Box: Opens in Center on Mobile, Right-aligned on Desktop */}
             <motion.div
               initial={{ opacity: 0, y: 25, scale: 0.95 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 20, scale: 0.95 }}
               transition={{ type: 'spring', damping: 26, stiffness: 360 }}
-              className="fixed bottom-40 md:bottom-24 right-3 sm:right-6 left-3 sm:left-auto z-50 sm:w-96 max-w-sm h-[480px] max-h-[70vh] rounded-3xl bg-[#08121a]/95 backdrop-blur-2xl border border-emerald-500/25 shadow-2xl flex flex-col overflow-hidden text-white"
+              className="fixed bottom-40 md:bottom-24 left-1/2 -translate-x-1/2 md:left-auto md:translate-x-0 right-auto md:right-6 z-50 w-[calc(100vw-32px)] max-w-sm sm:w-96 h-[480px] max-h-[70vh] rounded-3xl bg-[#08121a]/95 backdrop-blur-2xl border border-emerald-500/25 shadow-2xl flex flex-col overflow-hidden text-white"
             >
               {/* Header */}
               <div className="p-4 bg-gradient-to-r from-emerald-950/80 via-teal-950/60 to-slate-900/90 border-b border-white/10 flex items-center justify-between shrink-0">
