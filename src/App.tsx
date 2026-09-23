@@ -95,6 +95,19 @@ export default function App() {
     localStorage.setItem('velopay_settings', JSON.stringify(settings));
   }, [settings]);
 
+  // Dynamically update site favicon if configured in admin settings
+  useEffect(() => {
+    if (settings.siteFavicon) {
+      let link: HTMLLinkElement | null = document.querySelector("link[rel*='icon']");
+      if (!link) {
+        link = document.createElement('link');
+        link.rel = 'icon';
+        document.head.appendChild(link);
+      }
+      link.href = settings.siteFavicon;
+    }
+  }, [settings.siteFavicon]);
+
   useEffect(() => {
     localStorage.setItem('velopay_chat_messages', JSON.stringify(chatMessages));
   }, [chatMessages]);
@@ -417,6 +430,7 @@ export default function App() {
       {/* Transparent Glass Top Header */}
       <Header 
         online={settings.online} 
+        siteLogo={settings.siteLogo}
         onAuthClick={() => currentUser ? setView('profile') : setIsAuthOpen(true)}
         currentUser={currentUser}
         view={view}

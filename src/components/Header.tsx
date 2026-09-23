@@ -4,6 +4,7 @@ import { User } from '../types';
 
 interface HeaderProps {
   online: boolean;
+  siteLogo?: string;
   onAuthClick: () => void;
   currentUser: User | null;
   view: 'home' | 'order' | 'order-list' | 'profile' | 'admin';
@@ -14,6 +15,7 @@ interface HeaderProps {
 
 export default function Header({ 
   online, 
+  siteLogo,
   onAuthClick, 
   currentUser, 
   view, 
@@ -72,9 +74,17 @@ export default function Header({
         <div className="flex items-center gap-2.5 sm:gap-3">
           <div 
             onClick={() => setView('home')}
-            className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-gradient-to-tr from-emerald-500 to-teal-600 flex items-center justify-center text-white shadow-lg shadow-emerald-500/20 active:scale-95 transition cursor-pointer shrink-0"
+            className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-gradient-to-tr from-emerald-500 to-teal-600 flex items-center justify-center text-white shadow-lg shadow-emerald-500/20 active:scale-95 transition cursor-pointer shrink-0 overflow-hidden border border-emerald-400/30"
           >
-            <Bolt className="w-6 h-6 animate-pulse" />
+            {siteLogo ? (
+              <img 
+                src={siteLogo} 
+                alt="Velopay" 
+                className="w-full h-full object-cover" 
+              />
+            ) : (
+              <Bolt className="w-6 h-6 animate-pulse text-white" />
+            )}
           </div>
           <div onClick={() => setView('home')} className="cursor-pointer">
             <div className="flex items-center gap-1.5">

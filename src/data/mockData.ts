@@ -153,6 +153,8 @@ export const INITIAL_SETTINGS: AdminSettings = {
   whatsapp: '8801700000000',
   adminBkashNumber: '01711223344 (Bkash Personal)',
   adminNagadNumber: '01955667788 (Nagad Personal)',
+  siteLogo: '',
+  siteFavicon: '',
   totalExchangedUSD: 48920,
   activeUsersCount: 1420,
   adminPin: '1234'

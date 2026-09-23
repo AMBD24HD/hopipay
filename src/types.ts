@@ -49,6 +49,8 @@ export interface AdminSettings {
   adminNagadNumber: string; // Where users send money when Buying USD
   bkashLogo?: string;       // Custom bKash logo URL
   nagadLogo?: string;       // Custom Nagad logo URL
+  siteLogo?: string;        // Site logo picture (shows next to Velopay & time)
+  siteFavicon?: string;     // Browser favicon URL
   totalExchangedUSD: number;
   activeUsersCount: number;
   adminPin?: string;        // Security PIN for admin panel (e.g. 1234)
