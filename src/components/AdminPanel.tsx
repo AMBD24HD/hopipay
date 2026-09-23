@@ -998,13 +998,15 @@ export default function AdminPanel({
                 <div className="p-4 rounded-xl bg-white/[0.03] border border-white/5 space-y-3">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-black text-pink-400">বিকাশ (bKash) সেটিংস</span>
-                    {settingsForm.bkashLogo ? (
-                      <img src={settingsForm.bkashLogo} alt="bKash" className="w-8 h-8 rounded-full object-contain bg-white p-0.5" />
-                    ) : (
-                      <div className="w-7 h-7 rounded-full bg-[#D12053] text-white text-[9px] font-black flex items-center justify-center">
-                        bKash
-                      </div>
-                    )}
+                    <div className="w-9 h-9 rounded-full aspect-square overflow-hidden border-2 border-pink-500/40 bg-white p-0.5 shadow-sm flex items-center justify-center shrink-0">
+                      {settingsForm.bkashLogo ? (
+                        <img src={settingsForm.bkashLogo} alt="bKash" className="w-full h-full rounded-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full rounded-full bg-gradient-to-tr from-[#E2136E] to-pink-500 text-white text-[9px] font-black flex items-center justify-center">
+                          bKash
+                        </div>
+                      )}
+                    </div>
                   </div>
 
                   <div className="space-y-1">
@@ -1047,13 +1049,15 @@ export default function AdminPanel({
                 <div className="p-4 rounded-xl bg-white/[0.03] border border-white/5 space-y-3">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-black text-orange-400">নগদ (Nagad) সেটিংস</span>
-                    {settingsForm.nagadLogo ? (
-                      <img src={settingsForm.nagadLogo} alt="Nagad" className="w-8 h-8 rounded-full object-contain bg-white p-0.5" />
-                    ) : (
-                      <div className="w-7 h-7 rounded-full bg-[#F7941D] text-white text-[9px] font-black flex items-center justify-center">
-                        Nagad
-                      </div>
-                    )}
+                    <div className="w-9 h-9 rounded-full aspect-square overflow-hidden border-2 border-orange-500/40 bg-white p-0.5 shadow-sm flex items-center justify-center shrink-0">
+                      {settingsForm.nagadLogo ? (
+                        <img src={settingsForm.nagadLogo} alt="Nagad" className="w-full h-full rounded-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full rounded-full bg-gradient-to-tr from-[#F7941D] to-orange-500 text-white text-[9px] font-black flex items-center justify-center">
+                          Nagad
+                        </div>
+                      )}
+                    </div>
                   </div>
 
                   <div className="space-y-1">

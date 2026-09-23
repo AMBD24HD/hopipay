@@ -200,9 +200,32 @@ export default function OrderForm({
                 আমাদের BDT ওয়ালেট নম্বর (নিচের নম্বরে টাকা পাঠান)
               </p>
               <div className="flex items-center justify-between gap-3">
-                <span className="text-sm font-black text-white break-all select-all font-mono">
-                  {adminPaymentDetails}
-                </span>
+                <div className="flex items-center gap-2.5 overflow-hidden">
+                  <div className={`w-8 h-8 rounded-full aspect-square overflow-hidden border p-0.5 flex items-center justify-center shrink-0 shadow-sm ${
+                    payoutMethod === 'bKash' ? 'border-[#E2136E]/60 bg-white' : 'border-[#F7941D]/60 bg-white'
+                  }`}>
+                    {payoutMethod === 'bKash' ? (
+                      adminSettings?.bkashLogo ? (
+                        <img src={adminSettings.bkashLogo} alt="bKash" className="w-full h-full rounded-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full rounded-full bg-gradient-to-tr from-[#E2136E] to-pink-500 text-white text-[8px] font-black flex items-center justify-center">
+                          bKash
+                        </div>
+                      )
+                    ) : (
+                      adminSettings?.nagadLogo ? (
+                        <img src={adminSettings.nagadLogo} alt="Nagad" className="w-full h-full rounded-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full rounded-full bg-gradient-to-tr from-[#F7941D] to-orange-500 text-white text-[8px] font-black flex items-center justify-center">
+                          Nagad
+                        </div>
+                      )
+                    )}
+                  </div>
+                  <span className="text-sm font-black text-white break-all select-all font-mono">
+                    {adminPaymentDetails}
+                  </span>
+                </div>
                 <button
                   type="button"
                   onClick={() => handleCopyText(adminPaymentDetails.split(' ')[0])}
@@ -224,52 +247,54 @@ export default function OrderForm({
             {/* bKash */}
             <div
               onClick={() => setPayoutMethod('bKash')}
-              className={`p-4 rounded-2xl border-2 cursor-pointer text-center flex flex-col items-center gap-2 transition duration-300 ${
+              className={`p-4 rounded-2xl border-2 cursor-pointer text-center flex flex-col items-center gap-2.5 transition duration-300 ${
                 payoutMethod === 'bKash'
-                  ? 'border-[#D12053] bg-[#D12053]/5 shadow-lg shadow-[#D12053]/5'
+                  ? 'border-[#E2136E] bg-[#E2136E]/10 shadow-lg shadow-[#E2136E]/15'
                   : 'border-white/5 bg-white/5 hover:border-white/10'
               }`}
             >
-              {adminSettings?.bkashLogo ? (
-                <div className="w-11 h-11 rounded-full bg-white p-1 flex items-center justify-center shadow-md overflow-hidden">
+              {/* Perfectly Circular Logo Wrapper */}
+              <div className="w-13 h-13 sm:w-14 sm:h-14 rounded-full aspect-square overflow-hidden border-2 border-[#E2136E]/60 bg-white p-0.5 shadow-md shadow-[#E2136E]/20 flex items-center justify-center shrink-0">
+                {adminSettings?.bkashLogo ? (
                   <img 
                     src={adminSettings.bkashLogo} 
                     alt="bKash" 
                     referrerPolicy="no-referrer" 
-                    className="w-full h-full object-contain" 
+                    className="w-full h-full rounded-full object-cover" 
                   />
-                </div>
-              ) : (
-                <div className="w-11 h-11 rounded-full bg-gradient-to-tr from-[#D12053] to-pink-500 flex items-center justify-center text-white font-black text-xs shadow-md">
-                  bKash
-                </div>
-              )}
+                ) : (
+                  <div className="w-full h-full rounded-full bg-gradient-to-tr from-[#E2136E] via-[#D12053] to-pink-500 flex items-center justify-center text-white font-black text-xs shadow-inner">
+                    bKash
+                  </div>
+                )}
+              </div>
               <span className="text-xs font-black text-white">বিকাশ ওয়ালেট</span>
             </div>
 
             {/* Nagad */}
             <div
               onClick={() => setPayoutMethod('Nagad')}
-              className={`p-4 rounded-2xl border-2 cursor-pointer text-center flex flex-col items-center gap-2 transition duration-300 ${
+              className={`p-4 rounded-2xl border-2 cursor-pointer text-center flex flex-col items-center gap-2.5 transition duration-300 ${
                 payoutMethod === 'Nagad'
-                  ? 'border-[#F7941D] bg-[#F7941D]/5 shadow-lg shadow-[#F7941D]/5'
+                  ? 'border-[#F7941D] bg-[#F7941D]/10 shadow-lg shadow-[#F7941D]/15'
                   : 'border-white/5 bg-white/5 hover:border-white/10'
               }`}
             >
-              {adminSettings?.nagadLogo ? (
-                <div className="w-11 h-11 rounded-full bg-white p-1 flex items-center justify-center shadow-md overflow-hidden">
+              {/* Perfectly Circular Logo Wrapper */}
+              <div className="w-13 h-13 sm:w-14 sm:h-14 rounded-full aspect-square overflow-hidden border-2 border-[#F7941D]/60 bg-white p-0.5 shadow-md shadow-[#F7941D]/20 flex items-center justify-center shrink-0">
+                {adminSettings?.nagadLogo ? (
                   <img 
                     src={adminSettings.nagadLogo} 
                     alt="Nagad" 
                     referrerPolicy="no-referrer" 
-                    className="w-full h-full object-contain" 
+                    className="w-full h-full rounded-full object-cover" 
                   />
-                </div>
-              ) : (
-                <div className="w-11 h-11 rounded-full bg-gradient-to-tr from-[#F7941D] to-orange-500 flex items-center justify-center text-white font-black text-xs shadow-md">
-                  Nagad
-                </div>
-              )}
+                ) : (
+                  <div className="w-full h-full rounded-full bg-gradient-to-tr from-[#F7941D] via-[#EA580C] to-orange-500 flex items-center justify-center text-white font-black text-xs shadow-inner">
+                    Nagad
+                  </div>
+                )}
+              </div>
               <span className="text-xs font-black text-white">নগদ ওয়ালেট</span>
             </div>
           </div>
