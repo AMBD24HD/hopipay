@@ -49,7 +49,11 @@ export default function LiveChatWidget({
           onClick={() => setIsOpen(!isOpen)}
           aria-label="অ্যাডমিন সাপোর্ট"
           id="admin-support-chat-button"
-          className="relative px-3.5 py-2.5 sm:px-4 sm:py-3 rounded-full bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-500 hover:from-emerald-500 hover:to-teal-500 text-white shadow-2xl shadow-emerald-950/70 flex items-center gap-2 border border-emerald-300/35 backdrop-blur-md cursor-pointer select-none transition-all duration-200"
+          className={`relative px-3.5 py-2.5 sm:px-4 sm:py-3 rounded-full text-white shadow-2xl flex items-center gap-2 backdrop-blur-md cursor-pointer select-none transition-all duration-300 border ${
+            adminSettings.online
+              ? 'bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-500 hover:from-emerald-500 hover:to-teal-500 shadow-emerald-950/70 border-emerald-300/35'
+              : 'bg-gradient-to-r from-rose-600 via-red-600 to-rose-500 hover:from-rose-500 hover:to-red-500 shadow-rose-950/70 border-rose-300/40'
+          }`}
         >
           {/* Light Dot and Headphone Icon together (closely placed with gap-1.5) */}
           <div className="flex items-center gap-1.5 shrink-0">
@@ -58,12 +62,12 @@ export default function LiveChatWidget({
               {adminSettings.online ? (
                 <>
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-300 opacity-75" />
-                  <span className="relative inline-flex rounded-full h-2 w-2 sm:h-2.5 sm:w-2.5 bg-emerald-400 shadow-sm shadow-emerald-400" />
+                  <span className="relative inline-flex rounded-full h-2 w-2 sm:h-2.5 sm:w-2.5 bg-emerald-300 shadow-sm shadow-emerald-300" />
                 </>
               ) : (
                 <>
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-70" />
-                  <span className="relative inline-flex rounded-full h-2 w-2 sm:h-2.5 sm:w-2.5 bg-rose-500 shadow-sm shadow-rose-500" />
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-80" />
+                  <span className="relative inline-flex rounded-full h-2 w-2 sm:h-2.5 sm:w-2.5 bg-white shadow-sm shadow-white" />
                 </>
               )}
             </span>
@@ -85,7 +89,9 @@ export default function LiveChatWidget({
 
           {/* Unread Message Counter Badge */}
           {unreadCount > 0 && !isOpen && (
-            <span className="ml-0.5 bg-rose-500 text-white text-[10px] font-black px-1.5 py-0.5 rounded-full border border-black/40 shadow-sm animate-bounce">
+            <span className={`ml-0.5 text-white text-[10px] font-black px-1.5 py-0.5 rounded-full border border-black/40 shadow-sm animate-bounce ${
+              adminSettings.online ? 'bg-rose-500' : 'bg-amber-400 text-black'
+            }`}>
               {unreadCount}
             </span>
           )}
@@ -108,13 +114,23 @@ export default function LiveChatWidget({
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 20, scale: 0.95 }}
               transition={{ type: 'spring', damping: 26, stiffness: 360 }}
-              className="fixed bottom-40 md:bottom-24 left-1/2 -translate-x-1/2 md:left-auto md:translate-x-0 right-auto md:right-6 z-50 w-[calc(100vw-32px)] max-w-sm sm:w-96 h-[480px] max-h-[70vh] rounded-3xl bg-[#08121a]/95 backdrop-blur-2xl border border-emerald-500/25 shadow-2xl flex flex-col overflow-hidden text-white"
+              className={`fixed bottom-40 md:bottom-24 left-1/2 -translate-x-1/2 md:left-auto md:translate-x-0 right-auto md:right-6 z-50 w-[calc(100vw-32px)] max-w-sm sm:w-96 h-[480px] max-h-[70vh] rounded-3xl bg-[#08121a]/95 backdrop-blur-2xl border shadow-2xl flex flex-col overflow-hidden text-white ${
+                adminSettings.online ? 'border-emerald-500/25 shadow-emerald-950/40' : 'border-rose-500/30 shadow-rose-950/50'
+              }`}
             >
               {/* Header */}
-              <div className="p-4 bg-gradient-to-r from-emerald-950/80 via-teal-950/60 to-slate-900/90 border-b border-white/10 flex items-center justify-between shrink-0">
+              <div className={`p-4 bg-gradient-to-r ${
+                adminSettings.online
+                  ? 'from-emerald-950/80 via-teal-950/60 to-slate-900/90'
+                  : 'from-rose-950/80 via-red-950/60 to-slate-900/90'
+              } border-b border-white/10 flex items-center justify-between shrink-0`}>
                 <div className="flex items-center gap-3">
                   <div className="relative">
-                    <div className="w-10 h-10 rounded-full bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 font-black">
+                    <div className={`w-10 h-10 rounded-full border flex items-center justify-center font-black ${
+                      adminSettings.online
+                        ? 'bg-emerald-500/20 border-emerald-500/40 text-emerald-400'
+                        : 'bg-rose-500/20 border-rose-500/40 text-rose-400'
+                    }`}>
                       <Sparkles className="w-5 h-5" />
                     </div>
                     <span
@@ -154,11 +170,15 @@ export default function LiveChatWidget({
               <div className="flex-1 p-4 overflow-y-auto space-y-3 scrollbar-thin scrollbar-thumb-white/10">
                 {/* Default Welcome Message */}
                 <div className="flex items-start gap-2.5">
-                  <div className="w-7 h-7 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0 text-xs font-bold border border-emerald-500/30">
+                  <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 text-xs font-bold border ${
+                    adminSettings.online
+                      ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
+                      : 'bg-rose-500/20 text-rose-400 border-rose-500/30'
+                  }`}>
                     <Bot className="w-4 h-4" />
                   </div>
                   <div className="max-w-[85%] bg-white/5 border border-white/10 p-3 rounded-2xl rounded-tl-sm text-xs leading-relaxed text-white/90">
-                    <p className="font-bold text-emerald-400 text-[10px] mb-1">
+                    <p className={`font-bold text-[10px] mb-1 ${adminSettings.online ? 'text-emerald-400' : 'text-rose-400'}`}>
                       অ্যাডমিন সাপোর্ট
                     </p>
                     স্বাগতম! Velopay অ্যাডমিন সাপোর্টে যেকোনো জিজ্ঞাসা বা অর্ডার সমস্যা সম্পর্কে সরাসরি মেসেজ দিন।
@@ -177,7 +197,7 @@ export default function LiveChatWidget({
                         className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 text-xs font-bold ${
                           isUser
                             ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30'
-                            : 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                            : (adminSettings.online ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-rose-500/20 text-rose-400 border border-rose-500/30')
                         }`}
                       >
                         {isUser ? <User className="w-3.5 h-3.5" /> : <Bot className="w-3.5 h-3.5" />}
@@ -219,12 +239,18 @@ export default function LiveChatWidget({
                   placeholder="মেসেজ লিখুন..."
                   value={inputText}
                   onChange={(e) => setInputText(e.target.value)}
-                  className="flex-1 px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-xs text-white placeholder-white/40 focus:outline-none focus:border-emerald-500 transition"
+                  className={`flex-1 px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-xs text-white placeholder-white/40 focus:outline-none transition ${
+                    adminSettings.online ? 'focus:border-emerald-500' : 'focus:border-rose-500'
+                  }`}
                 />
                 <button
                   type="submit"
                   disabled={!inputText.trim()}
-                  className="w-10 h-10 rounded-xl bg-emerald-500 hover:bg-emerald-400 disabled:opacity-40 text-white flex items-center justify-center transition cursor-pointer shadow-md shadow-emerald-500/20"
+                  className={`w-10 h-10 rounded-xl text-white flex items-center justify-center transition cursor-pointer shadow-md disabled:opacity-40 ${
+                    adminSettings.online
+                      ? 'bg-emerald-500 hover:bg-emerald-400 shadow-emerald-500/20'
+                      : 'bg-rose-500 hover:bg-rose-400 shadow-rose-500/20'
+                  }`}
                 >
                   <Send className="w-4 h-4" />
                 </button>
