@@ -62,7 +62,7 @@ interface AdminPanelProps {
   onDeleteCurrency?: (id: string) => void;
   onSendAdminChatMessage: (text: string, targetUserId?: string, userEmail?: string, userName?: string) => void;
   onClearUserChat?: (targetUserId: string, targetUserEmail?: string) => void;
-  onToggleBanUser?: (userIdOrEmail: string) => void;
+  onToggleBanUser?: (userIdOrEmail: string, altIdentifier?: string) => void;
   onCloseAdmin: () => void;
   onLogoutAdmin?: () => void;
   showToast: (text: string, type: 'success' | 'error' | 'info') => void;
@@ -1415,7 +1415,7 @@ export default function AdminPanel({
                           type="button"
                           onClick={() => {
                             if (onToggleBanUser) {
-                              onToggleBanUser(currentThread.userId || currentThread.userEmail);
+                              onToggleBanUser(currentThread.userId, currentThread.userEmail);
                             }
                           }}
                           className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer border active:scale-95 ${
@@ -1567,24 +1567,55 @@ export default function AdminPanel({
                       ))}
                     </div>
 
-                    {/* Bottom Admin Reply Form */}
-                    <form onSubmit={handleSendReply} className="p-3.5 bg-black/60 border-t border-white/10 flex gap-2 shrink-0">
-                      <input
-                        type="text"
-                        placeholder={`${currentThread.userName}-কে উত্তর লিখে পাঠান...`}
-                        value={adminReplyText}
-                        onChange={(e) => setAdminReplyText(e.target.value)}
-                        className="flex-1 px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-xs sm:text-sm text-white placeholder-white/40 focus:outline-none focus:border-emerald-500 transition"
-                      />
-                      <button
-                        type="submit"
-                        disabled={!adminReplyText.trim()}
-                        className="px-5 py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 disabled:opacity-40 text-white text-xs font-black flex items-center gap-1.5 transition cursor-pointer shadow-lg shadow-emerald-500/20 active:scale-95 shrink-0"
-                      >
-                        <Send className="w-4 h-4" />
-                        <span>পাঠান</span>
-                      </button>
-                    </form>
+                    {/* Bottom Admin Reply Form with Scroll Up / Down Controls */}
+                    <div className="p-3 bg-black/70 border-t border-white/10 space-y-2 shrink-0">
+                      {/* Bottom Scroll Buttons Bar */}
+                      <div className="flex items-center justify-between gap-2 px-1">
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={scrollChatToTop}
+                            title="চ্যাটের একদম শুরুতে যান"
+                            className="px-2.5 py-1.5 rounded-lg bg-white/5 hover:bg-white/15 text-white/80 hover:text-white text-[11px] font-bold flex items-center gap-1.5 transition active:scale-95 border border-white/10 cursor-pointer"
+                          >
+                            <ChevronUp className="w-3.5 h-3.5 text-emerald-400" />
+                            <span>⬆ উপরে (Top)</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={scrollChatToBottom}
+                            title="চ্যাটের একদম শেষে যান"
+                            className="px-2.5 py-1.5 rounded-lg bg-white/5 hover:bg-white/15 text-white/80 hover:text-white text-[11px] font-bold flex items-center gap-1.5 transition active:scale-95 border border-white/10 cursor-pointer"
+                          >
+                            <ChevronDown className="w-3.5 h-3.5 text-emerald-400" />
+                            <span>⬇ নিচে (Bottom)</span>
+                          </button>
+                        </div>
+
+                        <span className="text-[10px] text-white/40 font-mono hidden sm:inline-block">
+                          {currentThread.userName} ({currentThreadMessages.length} টি মেসেজ)
+                        </span>
+                      </div>
+
+                      <form onSubmit={handleSendReply} className="flex gap-2">
+                        <input
+                          type="text"
+                          placeholder={`${currentThread.userName}-কে উত্তর লিখে পাঠান...`}
+                          value={adminReplyText}
+                          onChange={(e) => setAdminReplyText(e.target.value)}
+                          className="flex-1 px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-xs sm:text-sm text-white placeholder-white/40 focus:outline-none focus:border-emerald-500 transition"
+                        />
+                        <button
+                          type="submit"
+                          disabled={!adminReplyText.trim()}
+                          className="px-5 py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 disabled:opacity-40 text-white text-xs font-black flex items-center gap-1.5 transition cursor-pointer shadow-lg shadow-emerald-500/20 active:scale-95 shrink-0"
+                        >
+                          <Send className="w-4 h-4" />
+                          <span>পাঠান</span>
+                        </button>
+                      </form>
+                    </div>
                   </>
                 );
               })()}
@@ -1799,7 +1830,7 @@ export default function AdminPanel({
                         type="button"
                         onClick={() => {
                           if (onToggleBanUser) {
-                            onToggleBanUser(user.id || user.email);
+                            onToggleBanUser(user.id, user.email);
                           }
                         }}
                         className={`flex-1 py-2.5 px-3 rounded-xl text-xs font-black transition flex items-center justify-center gap-1.5 cursor-pointer border active:scale-95 ${

@@ -11,6 +11,8 @@ interface LiveChatWidgetProps {
   currentUser?: { id?: string; name: string; email: string; avatar?: string } | null;
   isOpenControlled?: boolean;
   onToggleControlled?: (open: boolean) => void;
+  onRequireAuth?: () => void;
+  isBanned?: boolean;
 }
 
 export default function LiveChatWidget({
@@ -19,11 +21,17 @@ export default function LiveChatWidget({
   adminSettings,
   currentUser,
   isOpenControlled,
-  onToggleControlled
+  onToggleControlled,
+  onRequireAuth,
+  isBanned = false
 }: LiveChatWidgetProps) {
   const [internalIsOpen, setInternalIsOpen] = useState(false);
   const isOpen = isOpenControlled !== undefined ? isOpenControlled : internalIsOpen;
   const setIsOpen = (val: boolean) => {
+    if (val && !currentUser && onRequireAuth) {
+      onRequireAuth();
+      return;
+    }
     setInternalIsOpen(val);
     if (onToggleControlled) onToggleControlled(val);
   };
@@ -124,26 +132,26 @@ export default function LiveChatWidget({
           whileHover={{ scale: 1.04 }}
           whileTap={{ scale: 0.95 }}
           onClick={() => setIsOpen(!isOpen)}
-          aria-label="অ্যাডমিন সাপোর্ট"
+          aria-label="লাইভ চ্যাট"
           id="admin-support-chat-button"
           className={`relative px-3.5 py-2.5 sm:px-4 sm:py-3 rounded-full text-white shadow-2xl flex items-center gap-2 backdrop-blur-md cursor-pointer select-none transition-all duration-300 border ${
-            adminSettings.online
-              ? 'bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-500 hover:from-emerald-500 hover:to-teal-500 shadow-emerald-950/70 border-emerald-300/35'
-              : 'bg-gradient-to-r from-rose-600 via-red-600 to-rose-500 hover:from-rose-500 hover:to-red-500 shadow-rose-950/70 border-rose-300/40'
+            isBanned || !adminSettings.online
+              ? 'bg-gradient-to-r from-rose-600 via-red-600 to-rose-500 hover:from-rose-500 hover:to-red-500 shadow-rose-950/70 border-rose-300/40'
+              : 'bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-500 hover:from-emerald-500 hover:to-teal-500 shadow-emerald-950/70 border-emerald-300/35'
           }`}
         >
           {/* Light Dot and Headphone Icon together */}
           <div className="flex items-center gap-1.5 shrink-0">
             <span className="relative flex h-2 w-2 sm:h-2.5 sm:w-2.5 shrink-0 items-center justify-center">
-              {adminSettings.online ? (
-                <>
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-300 opacity-75" />
-                  <span className="relative inline-flex rounded-full h-2 w-2 sm:h-2.5 sm:w-2.5 bg-emerald-300 shadow-sm shadow-emerald-300" />
-                </>
-              ) : (
+              {isBanned || !adminSettings.online ? (
                 <>
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-80" />
                   <span className="relative inline-flex rounded-full h-2 w-2 sm:h-2.5 sm:w-2.5 bg-white shadow-sm shadow-white" />
+                </>
+              ) : (
+                <>
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-300 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-2 w-2 sm:h-2.5 sm:w-2.5 bg-emerald-300 shadow-sm shadow-emerald-300" />
                 </>
               )}
             </span>
@@ -158,12 +166,12 @@ export default function LiveChatWidget({
           </div>
 
           <span className="text-xs sm:text-sm font-black tracking-wide whitespace-nowrap drop-shadow-sm">
-            অ্যাডমিন সাপোর্ট
+            লাইভ চ্যাট
           </span>
 
           {unreadCount > 0 && !isOpen && (
             <span className={`ml-0.5 text-white text-[10px] font-black px-1.5 py-0.5 rounded-full border border-black/40 shadow-sm animate-bounce ${
-              adminSettings.online ? 'bg-rose-500' : 'bg-amber-400 text-black'
+              isBanned || !adminSettings.online ? 'bg-amber-400 text-black' : 'bg-rose-500'
             }`}>
               {unreadCount}
             </span>
@@ -188,75 +196,65 @@ export default function LiveChatWidget({
               exit={{ opacity: 0, y: 20, scale: 0.95 }}
               transition={{ type: 'spring', damping: 26, stiffness: 360 }}
               className={`fixed bottom-40 md:bottom-24 left-1/2 -translate-x-1/2 md:left-auto md:translate-x-0 right-auto md:right-6 z-50 w-[calc(100vw-32px)] max-w-sm sm:w-96 h-[500px] max-h-[72vh] rounded-3xl bg-[#08121a]/95 backdrop-blur-2xl border shadow-2xl flex flex-col overflow-hidden text-white ${
-                adminSettings.online ? 'border-emerald-500/25 shadow-emerald-950/40' : 'border-rose-500/30 shadow-rose-950/50'
+                isBanned || !adminSettings.online ? 'border-rose-500/30 shadow-rose-950/50' : 'border-emerald-500/25 shadow-emerald-950/40'
               }`}
             >
               {/* Header */}
               <div className={`p-3.5 bg-gradient-to-r ${
-                adminSettings.online
-                  ? 'from-emerald-950/80 via-teal-950/60 to-slate-900/90'
-                  : 'from-rose-950/80 via-red-950/60 to-slate-900/90'
+                isBanned || !adminSettings.online
+                  ? 'from-rose-950/80 via-red-950/60 to-slate-900/90'
+                  : 'from-emerald-950/80 via-teal-950/60 to-slate-900/90'
               } border-b border-white/10 flex items-center justify-between shrink-0`}>
                 <div className="flex items-center gap-2.5">
                   <div className="relative">
                     <div className={`w-9 h-9 rounded-full border flex items-center justify-center font-black ${
-                      adminSettings.online
-                        ? 'bg-emerald-500/20 border-emerald-500/40 text-emerald-400'
-                        : 'bg-rose-500/20 border-rose-500/40 text-rose-400'
+                      isBanned || !adminSettings.online
+                        ? 'bg-rose-500/20 border-rose-500/40 text-rose-400'
+                        : 'bg-emerald-500/20 border-emerald-500/40 text-emerald-400'
                     }`}>
                       <Sparkles className="w-4 h-4" />
                     </div>
                     <span
                       className={`absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border border-[#08121a] ${
-                        adminSettings.online ? 'bg-emerald-400 animate-pulse' : 'bg-rose-500 animate-pulse'
+                        isBanned || !adminSettings.online ? 'bg-rose-500 animate-pulse' : 'bg-emerald-400 animate-pulse'
                       }`}
                     />
                   </div>
                   <div>
                     <h4 className="text-xs sm:text-sm font-black text-white flex items-center gap-1.5">
-                      অ্যাডমিন সাপোর্ট
+                      লাইভ চ্যাট
+                      {isBanned && (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-rose-600/60 text-white font-bold border border-rose-400/40">
+                          ব্যান সাপোর্ট
+                        </span>
+                      )}
                     </h4>
                     <p className={`text-[10px] font-bold flex items-center gap-1.5 ${
-                      adminSettings.online ? 'text-white/60' : 'text-rose-400 font-bold'
+                      isBanned
+                        ? 'text-rose-300 font-bold'
+                        : adminSettings.online ? 'text-white/60' : 'text-rose-400 font-bold'
                     }`}>
                       <span
                         className={`w-1.5 h-1.5 rounded-full ${
-                          adminSettings.online ? 'bg-emerald-400 animate-pulse' : 'bg-rose-500 animate-pulse'
+                          isBanned || !adminSettings.online ? 'bg-rose-500 animate-pulse' : 'bg-emerald-400 animate-pulse'
                         }`}
                       />
-                      {adminSettings.online
+                      {isBanned
+                        ? 'আনব্যান ও জরুরি সহায়তা'
+                        : adminSettings.online
                         ? 'অ্যাডমিন অনলাইনে আছেন'
                         : 'অ্যাডমিন বর্তমানে অফলাইনে আছেন'}
                     </p>
                   </div>
                 </div>
 
-                {/* Header Action Controls: Scroll Up/Down & Close */}
+                {/* Header Action Controls: Close */}
                 <div className="flex items-center gap-1.5">
-                  {/* Quick Scroll Up Button */}
-                  <button
-                    type="button"
-                    onClick={scrollToTop}
-                    title="উপরে যান (Scroll to Top)"
-                    className="w-7 h-7 rounded-lg bg-white/5 hover:bg-white/15 text-white/70 hover:text-white flex items-center justify-center transition active:scale-90 cursor-pointer border border-white/10"
-                  >
-                    <ChevronUp className="w-4 h-4" />
-                  </button>
-
-                  {/* Quick Scroll Down Button */}
-                  <button
-                    type="button"
-                    onClick={scrollToBottom}
-                    title="নিচে যান (Scroll to Bottom)"
-                    className="w-7 h-7 rounded-lg bg-white/5 hover:bg-white/15 text-white/70 hover:text-white flex items-center justify-center transition active:scale-90 cursor-pointer border border-white/10"
-                  >
-                    <ChevronDown className="w-4 h-4" />
-                  </button>
-
                   {/* Close Chat Button */}
                   <button
                     onClick={() => setIsOpen(false)}
                     className="w-7 h-7 rounded-lg bg-white/5 hover:bg-rose-500/20 flex items-center justify-center text-white/70 hover:text-rose-300 transition cursor-pointer border border-white/10"
+                    title="চ্যাট বন্ধ করুন"
                   >
                     <X className="w-4 h-4" />
                   </button>
@@ -271,17 +269,19 @@ export default function LiveChatWidget({
                 {/* Default Welcome Message */}
                 <div className="flex items-start gap-2.5">
                   <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 text-xs font-bold border ${
-                    adminSettings.online
-                      ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
-                      : 'bg-rose-500/20 text-rose-400 border-rose-500/30'
+                    isBanned || !adminSettings.online
+                      ? 'bg-rose-500/20 text-rose-400 border-rose-500/30'
+                      : 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
                   }`}>
                     <Bot className="w-4 h-4" />
                   </div>
                   <div className="max-w-[85%] bg-white/5 border border-white/10 p-3 rounded-2xl rounded-tl-sm text-xs leading-relaxed text-white/90">
-                    <p className={`font-bold text-[10px] mb-1 ${adminSettings.online ? 'text-emerald-400' : 'text-rose-400'}`}>
-                      অ্যাডমিন সাপোর্ট
+                    <p className={`font-bold text-[10px] mb-1 ${isBanned || !adminSettings.online ? 'text-rose-400' : 'text-emerald-400'}`}>
+                      লাইভ চ্যাট হেল্পলাইন
                     </p>
-                    স্বাগতম! Velopay অ্যাডমিন সাপোর্টে যেকোনো জিজ্ঞাসা বা অর্ডার সমস্যা সম্পর্কে সরাসরি মেসেজ দিন।
+                    {isBanned
+                      ? 'স্বাগতম! অ্যাকাউন্ট স্থগিত বা ব্যান সম্পর্কে যেকোনো তথ্য ও আনব্যানের রিকোয়েস্ট জানাতে এখানে মেসেজ দিন।'
+                      : 'স্বাগতম! Velopay লাইভ চ্যাটে যেকোনো জিজ্ঞাসা বা অর্ডার সমস্যা সম্পর্কে সরাসরি মেসেজ দিন।'}
                   </div>
                 </div>
 

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Bolt, User as UserIcon, LogIn, Clock, Home, RefreshCw, History } from 'lucide-react';
+import { Bolt, User as UserIcon, LogIn, Clock, Home, RefreshCw, History, Ban, LogOut } from 'lucide-react';
 import { User } from '../types';
 
 interface HeaderProps {
@@ -10,6 +10,8 @@ interface HeaderProps {
   view: 'home' | 'order' | 'order-list' | 'profile' | 'admin';
   setView: (view: 'home' | 'order' | 'order-list' | 'profile' | 'admin') => void;
   checkAuthAndShow: (targetView: 'order' | 'order-list' | 'profile') => void;
+  isBanned?: boolean;
+  onSignOut?: () => void;
 }
 
 export default function Header({ 
@@ -19,7 +21,9 @@ export default function Header({
   currentUser, 
   view, 
   setView, 
-  checkAuthAndShow
+  checkAuthAndShow,
+  isBanned = false,
+  onSignOut
 }: HeaderProps) {
   const [timeStr, setTimeStr] = useState<string>('সময়...');
   const [greeting, setGreeting] = useState<string>('শুভ দিন!');
@@ -65,6 +69,54 @@ export default function Header({
     const interval = setInterval(updateTimeAndGreeting, 1000);
     return () => clearInterval(interval);
   }, []);
+
+  // When User is Banned: Header only shows BAN ACCOUNT title, no Home/Trade/Order/Online/Profile!
+  if (isBanned) {
+    return (
+      <header className="sticky top-0 z-[100] ios-glass bg-rose-950/60 border-b border-rose-500/30 py-3.5 px-4 sm:px-8 shadow-xl shadow-rose-950/50">
+        <div className="max-w-7xl mx-auto w-full flex justify-between items-center gap-4">
+          {/* Left: Branding with Ban Icon */}
+          <div className="flex items-center gap-2.5 sm:gap-3">
+            <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-rose-600 flex items-center justify-center text-white shadow-lg shadow-rose-950/60 shrink-0 border border-rose-400/40">
+              <Ban className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <div className="flex items-center gap-1.5">
+                <span className="text-base sm:text-lg font-black text-white tracking-tight leading-tight">Velopay</span>
+              </div>
+              <span className="text-[11px] font-black text-rose-400 flex items-center gap-1">
+                🚫 অ্যাকাউন্ট স্থগিত
+              </span>
+            </div>
+          </div>
+
+          {/* Center: Prominent BAN ACCOUNT Header Title */}
+          <div className="flex items-center justify-center">
+            <div className="px-4 py-1.5 sm:px-6 sm:py-2 rounded-2xl bg-rose-600/30 border border-rose-500/60 text-white shadow-lg shadow-rose-950/70 flex items-center gap-2 animate-pulse">
+              <Ban className="w-4 h-4 sm:w-5 sm:h-5 text-rose-400 shrink-0" />
+              <span className="text-xs sm:text-sm font-black uppercase tracking-widest text-rose-200">
+                BAN ACCOUNT
+              </span>
+            </div>
+          </div>
+
+          {/* Right: Logout Button Only */}
+          <div>
+            {onSignOut && (
+              <button
+                type="button"
+                onClick={onSignOut}
+                className="px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-xl bg-white/10 hover:bg-rose-600 hover:text-white border border-rose-500/40 text-rose-200 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-sm active:scale-95"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+                <span>লগআউট</span>
+              </button>
+            )}
+          </div>
+        </div>
+      </header>
+    );
+  }
 
   return (
     <header className="sticky top-0 z-[100] ios-glass bg-emerald-950/20 border-b border-emerald-500/15 py-4 px-4 sm:px-8">

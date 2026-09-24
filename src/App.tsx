@@ -22,7 +22,9 @@ import {
   Mail,
   Eye,
   EyeOff,
-  Ban
+  Ban,
+  LogOut,
+  Headphones
 } from 'lucide-react';
 
 import { User, Order, Currency, AdminSettings, ChatMessage } from './types';
@@ -479,6 +481,15 @@ export default function App() {
   };
 
   const handleStartExchange = (currencyId: string, type: 'buy' | 'sell' = 'sell') => {
+    if (!currentUser) {
+      showToast('অনুগ্রহ করে এক্সচেঞ্জ বা অর্ডার করার আগে লগইন সম্পন্ন করুন!', 'info');
+      setIsAuthOpen(true);
+      return;
+    }
+    if (isCurrentUserBanned) {
+      showToast('আপনার অ্যাকাউন্টটি ব্যান করা হয়েছে। আপনি কোনো নতুন ট্রেডিং বা এক্সচেঞ্জ করতে পারবেন না।', 'error');
+      return;
+    }
     if (!settings.online) {
       showToast('Velopay বর্তমানে অফলাইন রয়েছে। অ্যাডমিন অনলাইন না হওয়া পর্যন্ত নতুন অর্ডার সাময়িকভাবে বন্ধ আছে।', 'error');
       return;
@@ -489,8 +500,13 @@ export default function App() {
   };
 
   const handleOrderSubmit = async (orderData: Omit<Order, 'id' | 'user' | 'email' | 'status' | 'time'>) => {
-    const userName = currentUser?.name || 'User ' + orderData.phone.slice(-4);
-    const userEmail = currentUser?.email || `${orderData.phone}@user.velopay.com`;
+    if (!currentUser) {
+      showToast('অনুগ্রহ করে অর্ডার করার আগে লগইন সম্পন্ন করুন!', 'info');
+      setIsAuthOpen(true);
+      return;
+    }
+    const userName = currentUser.name || 'User ' + orderData.phone.slice(-4);
+    const userEmail = currentUser.email || `${orderData.phone}@user.velopay.com`;
 
     const newOrder: Order = {
       ...orderData,
@@ -535,7 +551,7 @@ export default function App() {
       return;
     }
     if (!currentUser) {
-      showToast('অনুগ্রহ করে আগে লগইন সম্পন্ন করুন!', 'info');
+      showToast('অনুগ্রহ করে সাইট ব্যবহার করার আগে লগইন করুন!', 'info');
       setIsAuthOpen(true);
     } else {
       setView(targetView);
@@ -551,10 +567,15 @@ export default function App() {
     imageUrl?: string,
     userAvatar?: string
   ) => {
-    const senderUserId = userId || currentUser?.id || currentUser?.email || 'guest_' + Date.now();
-    const senderUserName = userName || currentUser?.name || 'কাস্টমার';
-    const senderUserEmail = userEmail || currentUser?.email || `${senderUserId}@guest.velopay.com`;
-    const senderAvatar = userAvatar || currentUser?.avatar;
+    if (!currentUser) {
+      showToast('চ্যাট করতে অনুগ্রহ করে আগে লগইন সম্পন্ন করুন!', 'info');
+      setIsAuthOpen(true);
+      return;
+    }
+    const senderUserId = userId || currentUser.id || currentUser.email || 'user_' + Date.now();
+    const senderUserName = userName || currentUser.name || 'কাস্টমার';
+    const senderUserEmail = userEmail || currentUser.email || `${senderUserId}@user.velopay.com`;
+    const senderAvatar = userAvatar || currentUser.avatar;
 
     const newMsg: ChatMessage = {
       id: 'msg-' + Date.now() + '-' + Math.floor(Math.random() * 1000),
@@ -586,11 +607,11 @@ export default function App() {
         const autoReply: ChatMessage = {
           id: 'reply-' + Date.now() + '-' + Math.floor(Math.random() * 1000),
           sender: 'admin',
-          senderName: 'অ্যাডমিন সাপোর্ট',
+          senderName: 'লাইভ চ্যাট হেল্পলাইন',
           userEmail: 'support@velopay.com',
           userId: senderUserId,
           targetUserId: senderUserId,
-          text: 'ধন্যবাদ! অ্যাডমিন বর্তমানে অফলাইনে আছেন। আপনার মেসেজ ও ছবি সংরক্ষিত হয়েছে, অনলাইনে এসে দ্রুত রিপ্লাই দেয়া হবে। জরুরি প্রয়োজনে হোয়াটসঅ্যাপে মেসেজ করুন।',
+          text: 'ধন্যবাদ! অ্যাডমিন বর্তমানে অফলাইনে আছেন। আপনার মেসেজ সংরক্ষিত হয়েছে, দ্রুততম সময়ে রিপ্লাই দেয়া হবে।',
           time: new Date().toISOString(),
           read: true
         };
@@ -640,29 +661,61 @@ export default function App() {
     }
   };
 
-  const handleToggleBanUser = async (userIdOrEmail: string) => {
+  const handleToggleBanUser = async (userIdOrEmail: string, altIdentifier?: string) => {
     const rawTarget = userIdOrEmail.trim();
+    const rawAlt = altIdentifier?.trim();
     const currentBanned = settings.bannedUsers || [];
+    
+    // Check if target or alt target is banned
     const isAlreadyBanned = currentBanned.some(
-      id => id.toLowerCase() === rawTarget.toLowerCase()
+      id => id.toLowerCase() === rawTarget.toLowerCase() || (rawAlt && id.toLowerCase() === rawAlt.toLowerCase())
     );
     
-    const newBanned = isAlreadyBanned
-      ? currentBanned.filter(id => id.toLowerCase() !== rawTarget.toLowerCase())
-      : [...currentBanned, rawTarget];
+    let newBanned: string[];
+    if (isAlreadyBanned) {
+      newBanned = currentBanned.filter(
+        id => id.toLowerCase() !== rawTarget.toLowerCase() && (!rawAlt || id.toLowerCase() !== rawAlt.toLowerCase())
+      );
+    } else {
+      newBanned = [...currentBanned, rawTarget];
+      if (rawAlt && rawAlt.toLowerCase() !== rawTarget.toLowerCase() && !newBanned.includes(rawAlt)) {
+        newBanned.push(rawAlt);
+      }
+    }
 
     const updatedSettings: AdminSettings = {
       ...settings,
       bannedUsers: newBanned
     };
 
+    // Optimistic fast local update
     setSettings(updatedSettings);
     localStorage.setItem('velopay_settings', JSON.stringify(updatedSettings));
+
+    // Also update registeredUsers state optimistically
+    setRegisteredUsers(prev => prev.map(u => {
+      const match = (u.id && (u.id === rawTarget || u.id === rawAlt)) ||
+                    (u.email && (u.email.toLowerCase() === rawTarget.toLowerCase() || (rawAlt && u.email.toLowerCase() === rawAlt.toLowerCase())));
+      if (match) {
+        return { ...u, isBanned: !isAlreadyBanned };
+      }
+      return u;
+    }));
 
     if (db) {
       try {
         await setDoc(doc(db, 'settings', 'global'), cleanForFirestore(updatedSettings), { merge: true });
         await setDoc(doc(db, 'settings', 'admin_config'), cleanForFirestore(updatedSettings), { merge: true });
+        
+        // If it's a registered user UID, update their user document
+        const targetUser = registeredUsers.find(u => 
+          u.id === rawTarget || u.id === rawAlt || 
+          u.email?.toLowerCase() === rawTarget.toLowerCase() || 
+          (rawAlt && u.email?.toLowerCase() === rawAlt.toLowerCase())
+        );
+        if (targetUser && targetUser.id) {
+          await setDoc(doc(db, 'users', targetUser.id), { isBanned: !isAlreadyBanned }, { merge: true });
+        }
       } catch (e) {
         console.warn('Firestore settings update error:', e);
       }
@@ -704,8 +757,8 @@ export default function App() {
     currentUser &&
     settings.bannedUsers &&
     (
-      (currentUser.id && settings.bannedUsers.some(b => b.toLowerCase() === currentUser.id?.toLowerCase())) ||
-      (currentUser.email && settings.bannedUsers.some(b => b.toLowerCase() === currentUser.email?.toLowerCase()))
+      (currentUser.id && settings.bannedUsers.some(b => b.trim().toLowerCase() === currentUser.id?.trim().toLowerCase())) ||
+      (currentUser.email && settings.bannedUsers.some(b => b.trim().toLowerCase() === currentUser.email?.trim().toLowerCase()))
     )
   );
 
@@ -871,12 +924,22 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col relative overflow-hidden bg-[#070e0a]">
-      {/* Exquisite Glowing Forest Background Blobs (iOS Style) */}
-      <div className="absolute top-[-10%] left-[-10%] w-[50vw] h-[50vw] rounded-full bg-emerald-500/15 blur-[120px] pointer-events-none" />
-      <div className="absolute bottom-[-10%] right-[-10%] w-[45vw] h-[45vw] rounded-full bg-teal-500/15 blur-[130px] pointer-events-none animate-pulse" />
-      <div className="absolute top-[40%] left-[60%] w-[35vw] h-[35vw] rounded-full bg-cyan-600/10 blur-[100px] pointer-events-none" />
-      <div className="absolute top-[20%] right-[70%] w-[30vw] h-[30vw] rounded-full bg-emerald-700/8 blur-[90px] pointer-events-none" />
+    <div className={`min-h-screen flex flex-col relative overflow-hidden ${isCurrentUserBanned ? 'bg-[#140205]' : 'bg-[#070e0a]'}`}>
+      {/* Glowing Background Blobs (Red theme if banned, Emerald theme if normal) */}
+      {isCurrentUserBanned ? (
+        <>
+          <div className="absolute top-[-10%] left-[-10%] w-[55vw] h-[55vw] rounded-full bg-rose-600/20 blur-[130px] pointer-events-none" />
+          <div className="absolute bottom-[-10%] right-[-10%] w-[50vw] h-[50vw] rounded-full bg-red-700/20 blur-[140px] pointer-events-none animate-pulse" />
+          <div className="absolute top-[35%] left-[50%] -translate-x-1/2 w-[40vw] h-[40vw] rounded-full bg-rose-900/25 blur-[120px] pointer-events-none" />
+        </>
+      ) : (
+        <>
+          <div className="absolute top-[-10%] left-[-10%] w-[50vw] h-[50vw] rounded-full bg-emerald-500/15 blur-[120px] pointer-events-none" />
+          <div className="absolute bottom-[-10%] right-[-10%] w-[45vw] h-[45vw] rounded-full bg-teal-500/15 blur-[130px] pointer-events-none animate-pulse" />
+          <div className="absolute top-[40%] left-[60%] w-[35vw] h-[35vw] rounded-full bg-cyan-600/10 blur-[100px] pointer-events-none" />
+          <div className="absolute top-[20%] right-[70%] w-[30vw] h-[30vw] rounded-full bg-emerald-700/8 blur-[90px] pointer-events-none" />
+        </>
+      )}
 
       {/* Floating Push-notification Toasts */}
       <Toast toasts={toasts} onRemove={removeToast} />
@@ -890,55 +953,57 @@ export default function App() {
         view={view}
         setView={setView}
         checkAuthAndShow={checkAuthAndShow}
+        isBanned={isCurrentUserBanned}
+        onSignOut={handleSignOut}
       />
 
-      {/* Premium notice Marquee bar (normal styling for both online & offline) */}
-      <div className="bg-emerald-500/10 border-y border-emerald-500/15 py-3 overflow-hidden select-none">
-        <div className="marquee-scroller text-xs sm:text-sm font-semibold tracking-wide text-emerald-400 gap-16">
-          <span>{settings.notice}</span>
-          <span>{settings.notice}</span>
-          <span>{settings.notice}</span>
+      {/* Notice Banner: Red alert bar if Banned, normal Marquee if Active */}
+      {isCurrentUserBanned ? (
+        <div className="bg-rose-600/20 border-y border-rose-500/40 py-2.5 px-4 text-center select-none shadow-lg shadow-rose-950/40">
+          <div className="flex items-center justify-center gap-2 text-rose-300 font-black text-xs sm:text-sm tracking-wider uppercase">
+            <Ban className="w-4 h-4 text-rose-400 shrink-0 animate-pulse" />
+            <span>অ্যাকাউন্ট ব্যান করা হয়েছে • সাইটের সকল সার্ভিস ও ট্রেডিং স্থগিত</span>
+          </div>
         </div>
-      </div>
+      ) : (
+        <div className="bg-emerald-500/10 border-y border-emerald-500/15 py-3 overflow-hidden select-none">
+          <div className="marquee-scroller text-xs sm:text-sm font-semibold tracking-wide text-emerald-400 gap-16">
+            <span>{settings.notice}</span>
+            <span>{settings.notice}</span>
+            <span>{settings.notice}</span>
+          </div>
+        </div>
+      )}
 
       {/* Main Container Viewport */}
       <main className="max-w-7xl mx-auto w-full px-4 sm:px-8 py-8 pb-32 md:pb-16 flex-1 relative z-10">
-        {/* If User is Banned: Show ONLY the dedicated Banned Notice Screen with Avatar, Gmail, and Name */}
+        {/* If User is Banned: Show ONLY the dedicated Banned Notice Screen with Ban Icon, Gmail, and Name */}
         {isCurrentUserBanned ? (
-          <div className="max-w-xl mx-auto my-6 sm:my-12">
+          <div className="max-w-xl mx-auto my-6 sm:my-10">
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
-              className="relative overflow-hidden rounded-[32px] border-2 border-rose-500/60 bg-gradient-to-b from-[#250409]/95 via-[#180306]/95 to-[#0b0103]/98 backdrop-blur-2xl p-6 sm:p-10 shadow-2xl shadow-rose-950/90 text-center space-y-6"
+              className="relative overflow-hidden rounded-[32px] border-2 border-rose-500/70 bg-gradient-to-b from-[#2a0409]/95 via-[#1a0205]/95 to-[#0e0103]/98 backdrop-blur-2xl p-6 sm:p-10 shadow-2xl shadow-rose-950/90 text-center space-y-6"
             >
               {/* Glowing Background Accent */}
-              <div className="absolute -top-24 left-1/2 -translate-x-1/2 w-64 h-64 bg-rose-500/20 rounded-full blur-3xl pointer-events-none" />
+              <div className="absolute -top-24 left-1/2 -translate-x-1/2 w-72 h-72 bg-rose-500/25 rounded-full blur-3xl pointer-events-none" />
 
-              {/* User Avatar with Banned Warning Ring */}
+              {/* Banned Profile Icon (NO user photo, ONLY the Red Ban 🚫 Icon) */}
               <div className="relative w-24 h-24 mx-auto mt-2">
-                {currentUser?.avatar ? (
-                  <img
-                    src={currentUser.avatar}
-                    alt={currentUser?.name || 'User'}
-                    referrerPolicy="no-referrer"
-                    className="w-24 h-24 rounded-3xl object-cover border-4 border-rose-500 shadow-xl shadow-rose-950/80"
-                  />
-                ) : (
-                  <div className="w-24 h-24 rounded-3xl bg-rose-500/20 border-4 border-rose-500 flex items-center justify-center text-rose-400 font-black text-3xl shadow-xl">
-                    <UserIcon className="w-12 h-12" />
-                  </div>
-                )}
-                <div className="absolute -bottom-2 -right-2 w-8 h-8 rounded-full bg-rose-600 border-2 border-[#180306] text-white flex items-center justify-center shadow-lg">
-                  <Ban className="w-4 h-4 text-white" />
+                <div className="w-24 h-24 rounded-3xl bg-gradient-to-tr from-rose-600 via-rose-700 to-red-800 border-4 border-rose-400/80 flex items-center justify-center text-white shadow-2xl shadow-rose-950">
+                  <Ban className="w-12 h-12 text-white animate-pulse" />
+                </div>
+                <div className="absolute -bottom-2 -right-2 w-8 h-8 rounded-full bg-black border-2 border-rose-500 text-rose-300 flex items-center justify-center shadow-lg font-black text-sm">
+                  🚫
                 </div>
               </div>
 
               {/* User Credentials (Name + Gmail) */}
-              <div className="space-y-1">
+              <div className="space-y-1.5">
                 <h3 className="text-xl sm:text-2xl font-black text-white">
-                  {currentUser?.name || 'সম্মানিত ইউজার'}
+                  {currentUser?.name || 'ইউজার'}
                 </h3>
-                <div className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-white/5 border border-white/10 text-xs sm:text-sm font-mono text-rose-200">
+                <div className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-white/5 border border-rose-500/30 text-xs sm:text-sm font-mono text-rose-200">
                   <Mail className="w-3.5 h-3.5 text-rose-400 shrink-0" />
                   <span>{currentUser?.email}</span>
                 </div>
@@ -946,51 +1011,46 @@ export default function App() {
 
               {/* Status Badge: সার্ভিস বন্ধ */}
               <div>
-                <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-rose-600 text-white font-black text-xs sm:text-sm uppercase tracking-wider shadow-lg shadow-rose-950/60 animate-pulse">
+                <span className="inline-flex items-center gap-2 px-5 py-2 rounded-full bg-rose-600 text-white font-black text-xs sm:text-sm uppercase tracking-wider shadow-xl shadow-rose-950/80 animate-pulse border border-rose-400/50">
                   <Ban className="w-4 h-4" /> সার্ভিস বন্ধ
                 </span>
               </div>
 
-              {/* Primary Notice */}
-              <div className="space-y-3 p-5 rounded-2xl bg-black/40 border border-rose-500/30">
-                <h4 className="text-lg sm:text-xl font-black text-rose-400">
-                  আপনার অ্যাকাউন্টটি ব্যান করা হয়েছে (Account Banned)
-                </h4>
-                <p className="text-xs sm:text-sm text-rose-100/90 font-medium leading-relaxed">
-                  অ্যাডমিন কর্তৃক অ্যাকাউন্ট স্থগিত থাকায় আপনি কোনো নতুন ট্রেডিং বা অর্ডার করতে পারবেন না।
-                </p>
-                <p className="text-[11px] text-white/50">
-                  জরুরি সহায়তা বা আনব্যানের জন্য অনুগ্রহ করে লাইভ চ্যাটে অ্যাডমিনের সাথে যোগাযোগ করুন।
-                </p>
+              {/* Primary Notice with Requested Exact Text */}
+              <div className="space-y-3 p-5 sm:p-6 rounded-2xl bg-black/60 border border-rose-500/40 shadow-inner">
+                <div className="space-y-1">
+                  <h4 className="text-xl sm:text-2xl font-black text-rose-400 tracking-tight">
+                    আপনার অ্যাকাউন্টটি ব্যান করা হয়েছে
+                  </h4>
+                  <p className="text-xs sm:text-sm font-black text-rose-300 tracking-wider">
+                    (Account Banned)
+                  </p>
+                </div>
+                <div className="pt-2 border-t border-rose-500/20">
+                  <p className="text-xs sm:text-sm text-rose-100/90 font-medium leading-relaxed">
+                    জরুরি সহায়তা বা আনব্যানের জন্য অনুগ্রহ করে লাইভ চ্যাটে অ্যাডমিনের সাথে যোগাযোগ করুন।
+                  </p>
+                </div>
               </div>
 
-              {/* Action Buttons */}
-              <div className="flex flex-col sm:flex-row gap-3 pt-2">
+              {/* Action Buttons: Live Chat (Red color) & Logout */}
+              <div className="pt-2 space-y-3">
                 <button
                   type="button"
                   onClick={() => setIsChatOpen(true)}
-                  className="flex-1 py-3.5 px-5 rounded-2xl bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-500 hover:to-red-500 text-white font-black text-xs sm:text-sm transition active:scale-95 flex items-center justify-center gap-2 shadow-lg shadow-rose-950/60 cursor-pointer border border-rose-400/40"
+                  className="w-full py-4 px-6 rounded-2xl bg-gradient-to-r from-rose-600 via-rose-500 to-red-600 hover:from-rose-500 hover:to-red-500 text-white font-black text-sm transition active:scale-95 cursor-pointer shadow-xl shadow-rose-950/80 border border-rose-400/50 flex items-center justify-center gap-2"
                 >
-                  <MessageSquare className="w-4 h-4 text-white" />
-                  <span>লাইভ চ্যাটে যোগাযোগ</span>
+                  <Headphones className="w-4 h-4" />
+                  <span>লাইভ চ্যাট</span>
                 </button>
-
-                <a
-                  href={`https://wa.me/${settings.whatsapp.replace(/[^0-9]/g, '')}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex-1 py-3.5 px-5 rounded-2xl bg-white/10 hover:bg-white/15 text-white font-bold text-xs sm:text-sm transition active:scale-95 flex items-center justify-center gap-2 cursor-pointer border border-white/15"
-                >
-                  <MessageCircle className="w-4 h-4 text-emerald-400" />
-                  <span>হোয়াটসঅ্যাপে হেল্পলাইন</span>
-                </a>
 
                 <button
                   type="button"
                   onClick={handleSignOut}
-                  className="py-3.5 px-5 rounded-2xl bg-white/5 hover:bg-rose-500/20 text-rose-300 hover:text-white font-bold text-xs sm:text-sm transition active:scale-95 cursor-pointer border border-white/10"
+                  className="w-full py-3.5 px-6 rounded-2xl bg-white/10 hover:bg-white/15 text-rose-200 hover:text-white font-bold text-sm transition active:scale-95 cursor-pointer border border-rose-500/30 flex items-center justify-center gap-2"
                 >
-                  লগআউট
+                  <LogOut className="w-4 h-4 text-rose-400" />
+                  <span>লগআউট</span>
                 </button>
               </div>
             </motion.div>
@@ -1173,59 +1233,61 @@ export default function App() {
         )}
       </main>
 
-      {/* Floating Bottom Navigation Bar (Responsive - Hidden on MD/Desktop) */}
-      <nav className="md:hidden fixed bottom-4 left-4 right-4 h-16 ios-glass rounded-[24px] border border-white/10 shadow-2xl flex justify-around items-center px-4 z-[150] active-green-glow">
-        <button 
-          onClick={() => setView('home')} 
-          className={`flex flex-col items-center gap-0.5 transition-all ${
-            view === 'home' ? 'text-emerald-400 scale-105 font-black' : 'text-white/40'
-          }`}
-        >
-          <Home className="w-4 h-4" />
-          <span className="text-[9px] font-bold uppercase tracking-wider">Home</span>
-        </button>
+      {/* Floating Bottom Navigation Bar (Hidden when Banned) */}
+      {!isCurrentUserBanned && (
+        <nav className="md:hidden fixed bottom-4 left-4 right-4 h-16 ios-glass rounded-[24px] border border-white/10 shadow-2xl flex justify-around items-center px-4 z-[150] active-green-glow">
+          <button 
+            onClick={() => setView('home')} 
+            className={`flex flex-col items-center gap-0.5 transition-all ${
+              view === 'home' ? 'text-emerald-400 scale-105 font-black' : 'text-white/40'
+            }`}
+          >
+            <Home className="w-4 h-4" />
+            <span className="text-[9px] font-bold uppercase tracking-wider">Home</span>
+          </button>
 
-        <button 
-          onClick={() => checkAuthAndShow('order')} 
-          className={`flex flex-col items-center gap-0.5 transition-all ${
-            view === 'order' ? 'text-emerald-400 scale-105 font-black' : 'text-white/40'
-          }`}
-        >
-          <RefreshCw className="w-4 h-4" />
-          <span className="text-[9px] font-bold uppercase tracking-wider">Trade</span>
-        </button>
+          <button 
+            onClick={() => checkAuthAndShow('order')} 
+            className={`flex flex-col items-center gap-0.5 transition-all ${
+              view === 'order' ? 'text-emerald-400 scale-105 font-black' : 'text-white/40'
+            }`}
+          >
+            <RefreshCw className="w-4 h-4" />
+            <span className="text-[9px] font-bold uppercase tracking-wider">Trade</span>
+          </button>
 
-        <button 
-          onClick={() => checkAuthAndShow('order-list')} 
-          className={`flex flex-col items-center gap-0.5 transition-all ${
-            view === 'order-list' ? 'text-emerald-400 scale-105 font-black' : 'text-white/40'
-          }`}
-        >
-          <History className="w-4 h-4" />
-          <span className="text-[9px] font-bold uppercase tracking-wider">Order</span>
-        </button>
+          <button 
+            onClick={() => checkAuthAndShow('order-list')} 
+            className={`flex flex-col items-center gap-0.5 transition-all ${
+              view === 'order-list' ? 'text-emerald-400 scale-105 font-black' : 'text-white/40'
+            }`}
+          >
+            <History className="w-4 h-4" />
+            <span className="text-[9px] font-bold uppercase tracking-wider">Order</span>
+          </button>
 
-        <button 
-          onClick={() => checkAuthAndShow('profile')} 
-          className={`flex flex-col items-center gap-0.5 transition-all ${
-            view === 'profile' ? 'text-emerald-400 scale-105 font-black' : 'text-white/40'
-          }`}
-        >
-          {currentUser?.avatar ? (
-            <img 
-              src={currentUser.avatar} 
-              alt="Profile" 
-              referrerPolicy="no-referrer"
-              className="w-4 h-4 rounded-full object-cover border border-emerald-400" 
-            />
-          ) : (
-            <UserIcon className="w-4 h-4" />
-          )}
-          <span className="text-[9px] font-bold uppercase tracking-wider">Profile</span>
-        </button>
-      </nav>
+          <button 
+            onClick={() => checkAuthAndShow('profile')} 
+            className={`flex flex-col items-center gap-0.5 transition-all ${
+              view === 'profile' ? 'text-emerald-400 scale-105 font-black' : 'text-white/40'
+            }`}
+          >
+            {currentUser?.avatar ? (
+              <img 
+                src={currentUser.avatar} 
+                alt="Profile" 
+                referrerPolicy="no-referrer"
+                className="w-4 h-4 rounded-full object-cover border border-emerald-400" 
+              />
+            ) : (
+              <UserIcon className="w-4 h-4" />
+            )}
+            <span className="text-[9px] font-bold uppercase tracking-wider">Profile</span>
+          </button>
+        </nav>
+      )}
 
-      {/* Floating Admin Live Chat Widget - Labeled "Admin Support" */}
+      {/* Live Chat Widget for Users & Banned Support */}
       <LiveChatWidget
         messages={chatMessages}
         onSendMessage={handleUserSendChatMessage}
@@ -1233,6 +1295,11 @@ export default function App() {
         currentUser={currentUser}
         isOpenControlled={isChatOpen}
         onToggleControlled={setIsChatOpen}
+        onRequireAuth={() => {
+          setIsAuthOpen(true);
+          showToast('লাইভ চ্যাট বা সাইট ব্যবহারের জন্য অনুগ্রহ করে আগে লগইন করুন!', 'info');
+        }}
+        isBanned={isCurrentUserBanned}
       />
 
       {/* Auth Modal Container Popup */}
