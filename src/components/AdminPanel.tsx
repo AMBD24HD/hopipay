@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Currency, Order, AdminSettings, ChatMessage } from '../types';
 import { 
   Shield, 
@@ -42,6 +42,8 @@ interface AdminPanelProps {
   onUpdateCurrencies: (currencies: Currency[]) => void;
   onUpdateOrders: (orders: Order[]) => void;
   onUpdateSettings: (settings: AdminSettings) => void;
+  onDeleteOrder?: (id: string) => void;
+  onDeleteCurrency?: (id: string) => void;
   onSendAdminChatMessage: (text: string, userEmail?: string) => void;
   onCloseAdmin: () => void;
   onLogoutAdmin?: () => void;
@@ -66,6 +68,8 @@ export default function AdminPanel({
   onUpdateCurrencies,
   onUpdateOrders,
   onUpdateSettings,
+  onDeleteOrder,
+  onDeleteCurrency,
   onSendAdminChatMessage,
   onCloseAdmin,
   onLogoutAdmin,
@@ -82,6 +86,11 @@ export default function AdminPanel({
 
   // Settings form state
   const [settingsForm, setSettingsForm] = useState<AdminSettings>(adminSettings);
+
+  // Sync settingsForm whenever adminSettings prop updates (e.g. from Firestore)
+  useEffect(() => {
+    setSettingsForm(adminSettings);
+  }, [adminSettings]);
 
   // 1-Tap Toggle Online / Offline
   const handleToggleOnline = () => {
@@ -102,6 +111,9 @@ export default function AdminPanel({
     if (confirm('আপনি কি নিশ্চিত এই অর্ডারটি মুছে ফেলতে চান?')) {
       const updatedOrders = orders.filter(o => o.id !== orderId);
       onUpdateOrders(updatedOrders);
+      if (onDeleteOrder) {
+        onDeleteOrder(orderId);
+      }
       showToast('অর্ডার সফলভাবে ডিলিট করা হয়েছে!', 'success');
     }
   };
@@ -171,6 +183,9 @@ export default function AdminPanel({
     if (confirm('আপনি কি এই কারেন্সি কার্ডটি ডিলিট করতে চান?')) {
       const updated = currencies.filter(c => c.id !== id);
       onUpdateCurrencies(updated);
+      if (onDeleteCurrency) {
+        onDeleteCurrency(id);
+      }
       showToast('কারেন্সি মুছে ফেলা হয়েছে!', 'info');
     }
   };

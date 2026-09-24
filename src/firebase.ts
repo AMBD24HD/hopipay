@@ -28,6 +28,14 @@ export const auth = getAuth(app);
 export const db = getFirestore(app);
 export const googleProvider = new GoogleAuthProvider();
 
+/**
+ * Strips undefined properties so Firestore writes never fail with invalid data error
+ */
+export function cleanForFirestore<T>(data: T): any {
+  if (data === null || data === undefined) return null;
+  return JSON.parse(JSON.stringify(data));
+}
+
 export {
   signInWithPopup,
   signInWithEmailAndPassword,
