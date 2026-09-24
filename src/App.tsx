@@ -89,6 +89,8 @@ export default function App() {
     }
     return [];
   });
+  const [registeredUsers, setRegisteredUsers] = useState<User[]>([]);
+  const [isChatOpen, setIsChatOpen] = useState(false);
 
   const [selectedCurrencyId, setSelectedCurrencyId] = useState<string>('');
   const [selectedOrderType, setSelectedOrderType] = useState<'buy' | 'sell'>('sell');
@@ -161,22 +163,35 @@ export default function App() {
           id: fbUser.uid,
           name: fbUser.displayName || fbUser.email?.split('@')[0] || 'User',
           email: fbUser.email || '',
-          avatar: fbUser.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(fbUser.displayName || 'U')}&background=10b981&color=fff`,
+          avatar: fbUser.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(fbUser.displayName || 'U')}&background=10b981&color=fff&bold=true`,
           createdAt: new Date().toISOString()
         };
         setCurrentUser(u);
         localStorage.setItem('velopay_user', JSON.stringify(u));
+        if (db && fbUser.uid) {
+          setDoc(doc(db, 'users', fbUser.uid), cleanForFirestore(u), { merge: true }).catch(e => console.warn('Firestore sync user:', e));
+        }
       }
     });
 
-    // 2. Realtime Firestore Sync for Orders, Settings, Currencies, and Chats
+    // 2. Realtime Firestore Sync for Orders, Settings, Currencies, Chats, and Registered Users
     let unsubscribeOrders = () => {};
     let unsubscribeSettings = () => {};
     let unsubscribeCurrencies = () => {};
     let unsubscribeChats = () => {};
+    let unsubscribeUsers = () => {};
 
     try {
       if (db) {
+        // Realtime users sync: lists all registered site users who signed up or logged in
+        unsubscribeUsers = onSnapshot(collection(db, 'users'), (snapshot) => {
+          const dbUsers: User[] = [];
+          snapshot.forEach(docSnap => {
+            dbUsers.push({ ...docSnap.data(), id: docSnap.id } as User);
+          });
+          setRegisteredUsers(dbUsers);
+        }, (err) => console.warn('Firestore users sync:', err));
+
         // Realtime orders sync: triggers instantly when admin adds, updates status, or deletes an order
         unsubscribeOrders = onSnapshot(collection(db, 'orders'), (snapshot) => {
           const dbOrders: Order[] = [];
@@ -252,6 +267,7 @@ export default function App() {
       unsubscribeSettings();
       unsubscribeCurrencies();
       unsubscribeChats();
+      unsubscribeUsers();
     };
   }, []);
 
@@ -625,11 +641,15 @@ export default function App() {
   };
 
   const handleToggleBanUser = async (userIdOrEmail: string) => {
+    const rawTarget = userIdOrEmail.trim();
     const currentBanned = settings.bannedUsers || [];
-    const isAlreadyBanned = currentBanned.includes(userIdOrEmail);
+    const isAlreadyBanned = currentBanned.some(
+      id => id.toLowerCase() === rawTarget.toLowerCase()
+    );
+    
     const newBanned = isAlreadyBanned
-      ? currentBanned.filter(id => id !== userIdOrEmail)
-      : [...currentBanned, userIdOrEmail];
+      ? currentBanned.filter(id => id.toLowerCase() !== rawTarget.toLowerCase())
+      : [...currentBanned, rawTarget];
 
     const updatedSettings: AdminSettings = {
       ...settings,
@@ -637,19 +657,21 @@ export default function App() {
     };
 
     setSettings(updatedSettings);
+    localStorage.setItem('velopay_settings', JSON.stringify(updatedSettings));
 
     if (db) {
       try {
-        await setDoc(doc(db, 'settings', 'admin_config'), cleanForFirestore(updatedSettings));
+        await setDoc(doc(db, 'settings', 'global'), cleanForFirestore(updatedSettings), { merge: true });
+        await setDoc(doc(db, 'settings', 'admin_config'), cleanForFirestore(updatedSettings), { merge: true });
       } catch (e) {
         console.warn('Firestore settings update error:', e);
       }
     }
 
     if (isAlreadyBanned) {
-      showToast(`ইউজার (${userIdOrEmail}) আনব্যান করা হয়েছে!`, 'success');
+      showToast(`ইউজার (${rawTarget}) আনব্যান করা হয়েছে!`, 'success');
     } else {
-      showToast(`ইউজার (${userIdOrEmail}) ব্যান করা হয়েছে!`, 'info');
+      showToast(`ইউজার (${rawTarget}) ব্যান করা হয়েছে!`, 'info');
     }
   };
 
@@ -682,8 +704,8 @@ export default function App() {
     currentUser &&
     settings.bannedUsers &&
     (
-      (currentUser.id && settings.bannedUsers.includes(currentUser.id)) ||
-      (currentUser.email && settings.bannedUsers.includes(currentUser.email))
+      (currentUser.id && settings.bannedUsers.some(b => b.toLowerCase() === currentUser.id?.toLowerCase())) ||
+      (currentUser.email && settings.bannedUsers.some(b => b.toLowerCase() === currentUser.email?.toLowerCase()))
     )
   );
 
@@ -704,6 +726,7 @@ export default function App() {
               orders={orders}
               adminSettings={settings}
               chatMessages={chatMessages}
+              registeredUsers={registeredUsers}
               onUpdateCurrencies={handleUpdateCurrencies}
               onUpdateOrders={handleUpdateOrders}
               onUpdateSettings={handleUpdateSettings}
@@ -880,204 +903,274 @@ export default function App() {
 
       {/* Main Container Viewport */}
       <main className="max-w-7xl mx-auto w-full px-4 sm:px-8 py-8 pb-32 md:pb-16 flex-1 relative z-10">
-        {/* Prominent Red Alert Banner if User is Banned */}
-        {isCurrentUserBanned && (
-          <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl border-2 border-rose-500/60 bg-gradient-to-br from-[#2e050c]/95 via-[#1a0306]/95 to-[#100103]/95 backdrop-blur-xl p-4 sm:p-5 shadow-2xl shadow-rose-950/80 mb-6">
-            <div className="flex items-center gap-3.5">
-              <div className="w-11 h-11 rounded-2xl bg-rose-500/20 border border-rose-500/40 flex items-center justify-center text-rose-400 shrink-0 shadow-inner">
-                <Ban className="w-6 h-6 text-rose-400" />
-              </div>
-              <div className="space-y-0.5">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <h4 className="text-sm sm:text-base font-black text-rose-300">
-                    আপনার অ্যাকাউন্টটি ব্যান করা হয়েছে (Account Banned)
-                  </h4>
-                  <span className="px-2 py-0.5 rounded-full bg-rose-500 text-white text-[9px] font-black uppercase">
-                    সার্ভিস বন্ধ
-                  </span>
+        {/* If User is Banned: Show ONLY the dedicated Banned Notice Screen with Avatar, Gmail, and Name */}
+        {isCurrentUserBanned ? (
+          <div className="max-w-xl mx-auto my-6 sm:my-12">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              className="relative overflow-hidden rounded-[32px] border-2 border-rose-500/60 bg-gradient-to-b from-[#250409]/95 via-[#180306]/95 to-[#0b0103]/98 backdrop-blur-2xl p-6 sm:p-10 shadow-2xl shadow-rose-950/90 text-center space-y-6"
+            >
+              {/* Glowing Background Accent */}
+              <div className="absolute -top-24 left-1/2 -translate-x-1/2 w-64 h-64 bg-rose-500/20 rounded-full blur-3xl pointer-events-none" />
+
+              {/* User Avatar with Banned Warning Ring */}
+              <div className="relative w-24 h-24 mx-auto mt-2">
+                {currentUser?.avatar ? (
+                  <img
+                    src={currentUser.avatar}
+                    alt={currentUser?.name || 'User'}
+                    referrerPolicy="no-referrer"
+                    className="w-24 h-24 rounded-3xl object-cover border-4 border-rose-500 shadow-xl shadow-rose-950/80"
+                  />
+                ) : (
+                  <div className="w-24 h-24 rounded-3xl bg-rose-500/20 border-4 border-rose-500 flex items-center justify-center text-rose-400 font-black text-3xl shadow-xl">
+                    <UserIcon className="w-12 h-12" />
+                  </div>
+                )}
+                <div className="absolute -bottom-2 -right-2 w-8 h-8 rounded-full bg-rose-600 border-2 border-[#180306] text-white flex items-center justify-center shadow-lg">
+                  <Ban className="w-4 h-4 text-white" />
                 </div>
-                <p className="text-xs text-rose-200/90 font-medium">
-                  অ্যাডমিন কর্তৃক অ্যাকাউন্ট স্থগিত থাকায় আপনি কোনো নতুন ট্রেডিং বা অর্ডার করতে পারবেন না। বিস্তারিত জানতে লাইভ চ্যাটে যোগাযোগ করুন।
+              </div>
+
+              {/* User Credentials (Name + Gmail) */}
+              <div className="space-y-1">
+                <h3 className="text-xl sm:text-2xl font-black text-white">
+                  {currentUser?.name || 'সম্মানিত ইউজার'}
+                </h3>
+                <div className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-white/5 border border-white/10 text-xs sm:text-sm font-mono text-rose-200">
+                  <Mail className="w-3.5 h-3.5 text-rose-400 shrink-0" />
+                  <span>{currentUser?.email}</span>
+                </div>
+              </div>
+
+              {/* Status Badge: সার্ভিস বন্ধ */}
+              <div>
+                <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-rose-600 text-white font-black text-xs sm:text-sm uppercase tracking-wider shadow-lg shadow-rose-950/60 animate-pulse">
+                  <Ban className="w-4 h-4" /> সার্ভিস বন্ধ
+                </span>
+              </div>
+
+              {/* Primary Notice */}
+              <div className="space-y-3 p-5 rounded-2xl bg-black/40 border border-rose-500/30">
+                <h4 className="text-lg sm:text-xl font-black text-rose-400">
+                  আপনার অ্যাকাউন্টটি ব্যান করা হয়েছে (Account Banned)
+                </h4>
+                <p className="text-xs sm:text-sm text-rose-100/90 font-medium leading-relaxed">
+                  অ্যাডমিন কর্তৃক অ্যাকাউন্ট স্থগিত থাকায় আপনি কোনো নতুন ট্রেডিং বা অর্ডার করতে পারবেন না।
+                </p>
+                <p className="text-[11px] text-white/50">
+                  জরুরি সহায়তা বা আনব্যানের জন্য অনুগ্রহ করে লাইভ চ্যাটে অ্যাডমিনের সাথে যোগাযোগ করুন।
                 </p>
               </div>
-            </div>
-          </div>
-        )}
 
-        <AnimatePresence mode="wait">
-          {view === 'home' && (
-            <motion.div
-              key="home"
-              initial={{ opacity: 0, y: 15 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -15 }}
-              transition={{ duration: 0.3 }}
-              className="space-y-8 sm:space-y-12"
-            >
-              {/* Prominent Offline Alert Banner if Admin turned site offline */}
-              {!settings.online && (
-                <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl border-2 border-rose-500/50 bg-gradient-to-br from-[#26050b]/95 via-[#1a0407]/95 to-[#120204]/95 backdrop-blur-xl p-4 sm:p-6 shadow-2xl shadow-rose-950/70 transition-all">
-                  {/* Subtle decorative red glow */}
-                  <div className="absolute -top-10 -right-10 w-32 h-32 bg-rose-500/20 rounded-full blur-2xl pointer-events-none" />
-                  
-                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 sm:gap-5 relative z-10">
-                    {/* Content Block */}
-                    <div className="flex items-start gap-3 sm:gap-4">
-                      {/* Alert Icon Box with Red Ping Indicator */}
-                      <div className="relative shrink-0 mt-0.5">
-                        <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl sm:rounded-2xl bg-rose-500/20 border border-rose-500/40 flex items-center justify-center text-rose-400 shadow-md shadow-rose-950/50">
-                          <AlertCircle className="w-5 h-5 sm:w-6 sm:h-6" />
+              {/* Action Buttons */}
+              <div className="flex flex-col sm:flex-row gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setIsChatOpen(true)}
+                  className="flex-1 py-3.5 px-5 rounded-2xl bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-500 hover:to-red-500 text-white font-black text-xs sm:text-sm transition active:scale-95 flex items-center justify-center gap-2 shadow-lg shadow-rose-950/60 cursor-pointer border border-rose-400/40"
+                >
+                  <MessageSquare className="w-4 h-4 text-white" />
+                  <span>লাইভ চ্যাটে যোগাযোগ</span>
+                </button>
+
+                <a
+                  href={`https://wa.me/${settings.whatsapp.replace(/[^0-9]/g, '')}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex-1 py-3.5 px-5 rounded-2xl bg-white/10 hover:bg-white/15 text-white font-bold text-xs sm:text-sm transition active:scale-95 flex items-center justify-center gap-2 cursor-pointer border border-white/15"
+                >
+                  <MessageCircle className="w-4 h-4 text-emerald-400" />
+                  <span>হোয়াটসঅ্যাপে হেল্পলাইন</span>
+                </a>
+
+                <button
+                  type="button"
+                  onClick={handleSignOut}
+                  className="py-3.5 px-5 rounded-2xl bg-white/5 hover:bg-rose-500/20 text-rose-300 hover:text-white font-bold text-xs sm:text-sm transition active:scale-95 cursor-pointer border border-white/10"
+                >
+                  লগআউট
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        ) : (
+          <AnimatePresence mode="wait">
+            {view === 'home' && (
+              <motion.div
+                key="home"
+                initial={{ opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -15 }}
+                transition={{ duration: 0.3 }}
+                className="space-y-8 sm:space-y-12"
+              >
+                {/* Prominent Offline Alert Banner if Admin turned site offline */}
+                {!settings.online && (
+                  <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl border-2 border-rose-500/50 bg-gradient-to-br from-[#26050b]/95 via-[#1a0407]/95 to-[#120204]/95 backdrop-blur-xl p-4 sm:p-6 shadow-2xl shadow-rose-950/70 transition-all">
+                    {/* Subtle decorative red glow */}
+                    <div className="absolute -top-10 -right-10 w-32 h-32 bg-rose-500/20 rounded-full blur-2xl pointer-events-none" />
+                    
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 sm:gap-5 relative z-10">
+                      {/* Content Block */}
+                      <div className="flex items-start gap-3 sm:gap-4">
+                        {/* Alert Icon Box with Red Ping Indicator */}
+                        <div className="relative shrink-0 mt-0.5">
+                          <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl sm:rounded-2xl bg-rose-500/20 border border-rose-500/40 flex items-center justify-center text-rose-400 shadow-md shadow-rose-950/50">
+                            <AlertCircle className="w-5 h-5 sm:w-6 sm:h-6" />
+                          </div>
+                          <span className="absolute -top-1 -right-1 flex h-3 w-3">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-80" />
+                            <span className="relative inline-flex rounded-full h-3 w-3 bg-rose-500" />
+                          </span>
                         </div>
-                        <span className="absolute -top-1 -right-1 flex h-3 w-3">
-                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-80" />
-                          <span className="relative inline-flex rounded-full h-3 w-3 bg-rose-500" />
-                        </span>
+
+                        {/* Text details - Pure Red Color Scheme */}
+                        <div className="space-y-1.5">
+                          <h4 className="text-sm sm:text-base font-black text-rose-400 tracking-tight">
+                            Velopay বর্তমানে অফলাইন রয়েছে (Offline)
+                          </h4>
+                          <p className="text-xs sm:text-sm text-rose-200/90 font-medium leading-relaxed">
+                            অ্যাডমিন অফলাইনে থাকার কারণে নতুন অর্ডার প্রসেসিং সাময়িকভাবে স্থগিত আছে। অ্যাডমিন অনলাইনে আসলে পুনরায় অর্ডার করতে পারবেন।
+                          </p>
+                        </div>
                       </div>
 
-                      {/* Text details - Pure Red Color Scheme */}
-                      <div className="space-y-1.5">
-                        <h4 className="text-sm sm:text-base font-black text-rose-400 tracking-tight">
-                          Velopay বর্তমানে অফলাইন রয়েছে (Offline)
-                        </h4>
-                        <p className="text-xs sm:text-sm text-rose-200/90 font-medium leading-relaxed">
-                          অ্যাডমিন অফলাইনে থাকার কারণে নতুন অর্ডার প্রসেসিং সাময়িকভাবে স্থগিত আছে। অ্যাডমিন অনলাইনে আসলে পুনরায় অর্ডার করতে পারবেন।
-                        </p>
+                      {/* WhatsApp Action Button - Pure Red Color */}
+                      <div className="pt-1 md:pt-0 shrink-0">
+                        <a
+                          href={`https://wa.me/${settings.whatsapp.replace(/[^0-9]/g, '')}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="group w-full md:w-auto px-5 py-3 sm:py-3.5 rounded-xl sm:rounded-2xl bg-gradient-to-r from-rose-600 via-rose-500 to-red-600 hover:from-rose-500 hover:to-red-500 text-white font-bold text-xs sm:text-sm transition-all duration-200 active:scale-[0.98] flex items-center justify-center gap-2.5 shadow-lg shadow-rose-950/60 border border-rose-400/40"
+                        >
+                          <MessageCircle className="w-4 h-4 fill-white/20 shrink-0 text-white" />
+                          <span className="font-black tracking-wide">হোয়াটসঅ্যাপে যোগাযোগ</span>
+                          <ArrowRight className="w-3.5 h-3.5 opacity-80 group-hover:translate-x-1 transition-transform shrink-0" />
+                        </a>
                       </div>
                     </div>
+                  </div>
+                )}
 
-                    {/* WhatsApp Action Button - Pure Red Color */}
-                    <div className="pt-1 md:pt-0 shrink-0">
+                {/* Hero Banner Grid Stats */}
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
+                  <div className="md:col-span-7 space-y-4">
+                    <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/25 text-emerald-400 text-xs font-black uppercase tracking-wider">
+                      <ShieldCheck className="w-4 h-4" /> ১০০% নিরাপদ ও বিশ্বস্ত এক্সচেঞ্জ
+                    </div>
+                    <h1 className="text-4xl sm:text-5xl font-black text-white tracking-tight leading-none">
+                      Velopay — <span className="text-emerald-400">বাই ও সেল</span>
+                    </h1>
+                    <p className="text-sm sm:text-base text-white/70 font-medium leading-relaxed max-w-xl">
+                      ফ্রিল্যান্সিং পেমেন্ট, ক্রিপ্টোকারেন্সি এবং ডিজিটাল ওয়ালেটের ডলার ৫-১০ মিনিটে বাংলাদেশি টাকায় বাই এবং সেল করুন সম্পূর্ণ বিশ্বস্ততার সাথে।
+                    </p>
+                    
+                    <div className="pt-2 flex flex-wrap gap-4">
                       <a
                         href={`https://wa.me/${settings.whatsapp.replace(/[^0-9]/g, '')}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="group w-full md:w-auto px-5 py-3 sm:py-3.5 rounded-xl sm:rounded-2xl bg-gradient-to-r from-rose-600 via-rose-500 to-red-600 hover:from-rose-500 hover:to-red-500 text-white font-bold text-xs sm:text-sm transition-all duration-200 active:scale-[0.98] flex items-center justify-center gap-2.5 shadow-lg shadow-rose-950/60 border border-rose-400/40"
+                        className="px-6 py-4 rounded-2xl ios-glass text-emerald-400 hover:text-emerald-300 font-bold text-sm transition active:scale-95 flex items-center gap-2.5 border border-emerald-500/20 hover:border-emerald-500/40 shadow-lg cursor-pointer"
                       >
-                        <MessageCircle className="w-4 h-4 fill-white/20 shrink-0 text-white" />
-                        <span className="font-black tracking-wide">হোয়াটসঅ্যাপে যোগাযোগ</span>
-                        <ArrowRight className="w-3.5 h-3.5 opacity-80 group-hover:translate-x-1 transition-transform shrink-0" />
+                        <MessageCircle className="w-5 h-5 text-emerald-400" /> হোয়াটসঅ্যাপ হেল্পলাইন
                       </a>
                     </div>
                   </div>
-                </div>
-              )}
 
-              {/* Hero Banner Grid Stats */}
-              <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
-                <div className="md:col-span-7 space-y-4">
-                  <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/25 text-emerald-400 text-xs font-black uppercase tracking-wider">
-                    <ShieldCheck className="w-4 h-4" /> ১০০% নিরাপদ ও বিশ্বস্ত এক্সচেঞ্জ
-                  </div>
-                  <h1 className="text-4xl sm:text-5xl font-black text-white tracking-tight leading-none">
-                    Velopay — <span className="text-emerald-400">বাই ও সেল</span>
-                  </h1>
-                  <p className="text-sm sm:text-base text-white/70 font-medium leading-relaxed max-w-xl">
-                    ফ্রিল্যান্সিং পেমেন্ট, ক্রিপ্টোকারেন্সি এবং ডিজিটাল ওয়ালেটের ডলার ৫-১০ মিনিটে বাংলাদেশি টাকায় বাই এবং সেল করুন সম্পূর্ণ বিশ্বস্ততার সাথে।
-                  </p>
-                  
-                  <div className="pt-2 flex flex-wrap gap-4">
-                    <a
-                      href={`https://wa.me/${settings.whatsapp.replace(/[^0-9]/g, '')}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="px-6 py-4 rounded-2xl ios-glass text-emerald-400 hover:text-emerald-300 font-bold text-sm transition active:scale-95 flex items-center gap-2.5 border border-emerald-500/20 hover:border-emerald-500/40 shadow-lg cursor-pointer"
-                    >
-                      <MessageCircle className="w-5 h-5 text-emerald-400" /> হোয়াটসঅ্যাপ হেল্পলাইন
-                    </a>
+                  <div className="md:col-span-5 grid grid-cols-2 gap-4">
+                    <div className="ios-glass p-5 rounded-2xl border border-white/10 text-center">
+                      <p className="text-xs text-white/50 font-bold uppercase tracking-widest mb-1">মোট বিনিময় সম্পন্ন</p>
+                      <p className="text-2xl font-black text-emerald-400 font-mono">
+                        ${settings.totalExchangedUSD.toLocaleString()}
+                      </p>
+                      <p className="text-[10px] text-white/40 font-semibold mt-1">ইউএসডি ডলার</p>
+                    </div>
+                    <div className="ios-glass p-5 rounded-2xl border border-white/10 text-center">
+                      <p className="text-xs text-white/50 font-bold uppercase tracking-widest mb-1">সক্রিয় ক্লায়েন্ট</p>
+                      <p className="text-2xl font-black text-emerald-400 font-mono">
+                        {settings.activeUsersCount.toLocaleString()}+
+                      </p>
+                      <p className="text-[10px] text-white/40 font-semibold mt-1">বাংলাদেশি ইউজার</p>
+                    </div>
                   </div>
                 </div>
 
-                <div className="md:col-span-5 grid grid-cols-2 gap-4">
-                  <div className="ios-glass p-5 rounded-2xl border border-white/10 text-center">
-                    <p className="text-xs text-white/50 font-bold uppercase tracking-widest mb-1">মোট বিনিময় সম্পন্ন</p>
-                    <p className="text-2xl font-black text-emerald-400 font-mono">
-                      ${settings.totalExchangedUSD.toLocaleString()}
-                    </p>
-                    <p className="text-[10px] text-white/40 font-semibold mt-1">ইউএসডি ডলার</p>
-                  </div>
-                  <div className="ios-glass p-5 rounded-2xl border border-white/10 text-center">
-                    <p className="text-xs text-white/50 font-bold uppercase tracking-widest mb-1">সক্রিয় ক্লায়েন্ট</p>
-                    <p className="text-2xl font-black text-emerald-400 font-mono">
-                      {settings.activeUsersCount.toLocaleString()}+
-                    </p>
-                    <p className="text-[10px] text-white/40 font-semibold mt-1">বাংলাদেশি ইউজার</p>
-                  </div>
-                </div>
-              </div>
+                {/* Currency Live List Panel (Dynamically fed from admin state) */}
+                <CurrencyList 
+                  currencies={currencies} 
+                  onStartExchange={handleStartExchange} 
+                />
+              </motion.div>
+            )}
 
-              {/* Currency Live List Panel (Dynamically fed from admin state) */}
-              <CurrencyList 
-                currencies={currencies} 
-                onStartExchange={handleStartExchange} 
-              />
-            </motion.div>
-          )}
+            {view === 'order' && (
+              <motion.div
+                key="order"
+                initial={{ opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -15 }}
+                transition={{ duration: 0.3 }}
+                className="max-w-3xl mx-auto"
+              >
+                <OrderForm 
+                  currencies={currencies} 
+                  initialSelectedCurrencyId={selectedCurrencyId}
+                  initialOrderType={selectedOrderType}
+                  adminSettings={settings}
+                  isBanned={isCurrentUserBanned}
+                  onOrderSubmit={handleOrderSubmit}
+                  showToast={showToast}
+                />
+              </motion.div>
+            )}
 
-          {view === 'order' && (
-            <motion.div
-              key="order"
-              initial={{ opacity: 0, y: 15 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -15 }}
-              transition={{ duration: 0.3 }}
-              className="max-w-3xl mx-auto"
-            >
-              <OrderForm 
-                currencies={currencies} 
-                initialSelectedCurrencyId={selectedCurrencyId}
-                initialOrderType={selectedOrderType}
-                adminSettings={settings}
-                isBanned={isCurrentUserBanned}
-                onOrderSubmit={handleOrderSubmit}
-                showToast={showToast}
-              />
-            </motion.div>
-          )}
+            {view === 'order-list' && currentUser && (
+              <motion.div
+                key="order-list"
+                initial={{ opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -15 }}
+                transition={{ duration: 0.3 }}
+                className="max-w-4xl mx-auto"
+              >
+                <ProfileView 
+                  user={{ ...currentUser, isBanned: isCurrentUserBanned }} 
+                  orders={orders} 
+                  onSignOut={handleSignOut}
+                  showToast={showToast}
+                  mode="orders"
+                  onNavigate={(v) => setView(v)}
+                  whatsapp={settings.whatsapp}
+                  onUpdateAvatar={handleUpdateAvatar}
+                />
+              </motion.div>
+            )}
 
-          {view === 'order-list' && currentUser && (
-            <motion.div
-              key="order-list"
-              initial={{ opacity: 0, y: 15 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -15 }}
-              transition={{ duration: 0.3 }}
-              className="max-w-4xl mx-auto"
-            >
-              <ProfileView 
-                user={{ ...currentUser, isBanned: isCurrentUserBanned }} 
-                orders={orders} 
-                onSignOut={handleSignOut}
-                showToast={showToast}
-                mode="orders"
-                onNavigate={(v) => setView(v)}
-                whatsapp={settings.whatsapp}
-                onUpdateAvatar={handleUpdateAvatar}
-              />
-            </motion.div>
-          )}
-
-          {view === 'profile' && currentUser && (
-            <motion.div
-              key="profile"
-              initial={{ opacity: 0, y: 15 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -15 }}
-              transition={{ duration: 0.3 }}
-              className="max-w-4xl mx-auto"
-            >
-              <ProfileView 
-                user={{ ...currentUser, isBanned: isCurrentUserBanned }} 
-                orders={orders} 
-                onSignOut={handleSignOut}
-                showToast={showToast}
-                mode="profile"
-                onNavigate={(v) => setView(v)}
-                whatsapp={settings.whatsapp}
-                onUpdateAvatar={handleUpdateAvatar}
-              />
-            </motion.div>
-          )}
-        </AnimatePresence>
+            {view === 'profile' && currentUser && (
+              <motion.div
+                key="profile"
+                initial={{ opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -15 }}
+                transition={{ duration: 0.3 }}
+                className="max-w-4xl mx-auto"
+              >
+                <ProfileView 
+                  user={{ ...currentUser, isBanned: isCurrentUserBanned }} 
+                  orders={orders} 
+                  onSignOut={handleSignOut}
+                  showToast={showToast}
+                  mode="profile"
+                  onNavigate={(v) => setView(v)}
+                  whatsapp={settings.whatsapp}
+                  onUpdateAvatar={handleUpdateAvatar}
+                />
+              </motion.div>
+            )}
+          </AnimatePresence>
+        )}
       </main>
 
       {/* Floating Bottom Navigation Bar (Responsive - Hidden on MD/Desktop) */}
@@ -1138,6 +1231,8 @@ export default function App() {
         onSendMessage={handleUserSendChatMessage}
         adminSettings={settings}
         currentUser={currentUser}
+        isOpenControlled={isChatOpen}
+        onToggleControlled={setIsChatOpen}
       />
 
       {/* Auth Modal Container Popup */}

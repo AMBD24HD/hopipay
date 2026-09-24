@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
-import { Currency, Order, AdminSettings, ChatMessage } from '../types';
+import { Currency, Order, AdminSettings, ChatMessage, User } from '../types';
 import { 
   Shield, 
   Settings, 
@@ -38,7 +38,12 @@ import {
   UserX,
   UserCheck,
   ZoomIn,
-  Ban
+  Ban,
+  ChevronUp,
+  ChevronDown,
+  Mail,
+  Calendar,
+  UserPlus
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { uploadImageToImgBB } from '../utils/imgbb';
@@ -49,6 +54,7 @@ interface AdminPanelProps {
   orders: Order[];
   adminSettings: AdminSettings;
   chatMessages: ChatMessage[];
+  registeredUsers?: User[];
   onUpdateCurrencies: (currencies: Currency[]) => void;
   onUpdateOrders: (orders: Order[]) => void;
   onUpdateSettings: (settings: AdminSettings) => void;
@@ -77,6 +83,7 @@ export default function AdminPanel({
   orders,
   adminSettings,
   chatMessages,
+  registeredUsers = [],
   onUpdateCurrencies,
   onUpdateOrders,
   onUpdateSettings,
@@ -89,7 +96,7 @@ export default function AdminPanel({
   onLogoutAdmin,
   showToast
 }: AdminPanelProps) {
-  const [activeTab, setActiveTab] = useState<'currencies' | 'orders' | 'settings' | 'chat'>('currencies');
+  const [activeTab, setActiveTab] = useState<'currencies' | 'orders' | 'chat' | 'users' | 'settings'>('currencies');
   const [orderFilter, setOrderFilter] = useState<'all' | 'Pending' | 'Success' | 'Cancelled'>('all');
   const [adminReplyText, setAdminReplyText] = useState('');
   const [isUploading, setIsUploading] = useState(false);
@@ -98,7 +105,12 @@ export default function AdminPanel({
   const [selectedChatUserId, setSelectedChatUserId] = useState<string | null>(null);
   const [chatSearchQuery, setChatSearchQuery] = useState('');
   const [previewModalUrl, setPreviewModalUrl] = useState<string | null>(null);
+  const chatMessagesContainerRef = useRef<HTMLDivElement>(null);
   const chatMessagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Users Tab states
+  const [userSearchQuery, setUserSearchQuery] = useState('');
+  const [userFilter, setUserFilter] = useState<'all' | 'active' | 'banned'>('all');
 
   // Editing state for currencies
   const [editingCurrency, setEditingCurrency] = useState<Currency | null>(null);
@@ -111,6 +123,130 @@ export default function AdminPanel({
   useEffect(() => {
     setSettingsForm(adminSettings);
   }, [adminSettings]);
+
+  // Chat scroll helpers
+  const scrollChatToTop = () => {
+    if (chatMessagesContainerRef.current) {
+      chatMessagesContainerRef.current.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
+  const scrollChatToBottom = () => {
+    chatMessagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  // Comprehensive list of all site users from Firestore Auth, Orders, and Live Chat
+  const allUsersList = useMemo(() => {
+    const map = new Map<string, {
+      id: string;
+      name: string;
+      email: string;
+      avatar?: string;
+      createdAt?: string;
+      totalOrders: number;
+      totalAmountUSD: number;
+      isBanned: boolean;
+      source: 'auth' | 'order' | 'chat';
+    }>();
+
+    const bannedList = adminSettings.bannedUsers || [];
+
+    // 1. Registered / Logged-in Users from Auth / Firestore
+    if (registeredUsers && registeredUsers.length > 0) {
+      registeredUsers.forEach(u => {
+        const key = (u.email || u.id || '').toLowerCase().trim();
+        if (!key) return;
+        const isBanned = Boolean(
+          (u.id && bannedList.includes(u.id)) ||
+          (u.email && bannedList.includes(u.email.toLowerCase())) ||
+          bannedList.includes(key)
+        );
+        map.set(key, {
+          id: u.id || key,
+          name: u.name || key.split('@')[0],
+          email: u.email || key,
+          avatar: u.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(u.name || 'U')}&background=10b981&color=fff&bold=true`,
+          createdAt: u.createdAt || new Date().toISOString(),
+          totalOrders: 0,
+          totalAmountUSD: 0,
+          isBanned,
+          source: 'auth'
+        });
+      });
+    }
+
+    // 2. Users from Orders
+    orders.forEach(o => {
+      const key = (o.email || o.user || '').toLowerCase().trim();
+      if (!key) return;
+      const isBanned = Boolean(
+        bannedList.includes(key) || 
+        (o.email && bannedList.includes(o.email.toLowerCase()))
+      );
+      if (!map.has(key)) {
+        map.set(key, {
+          id: key,
+          name: o.user || key.split('@')[0],
+          email: o.email || key,
+          avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(o.user || 'U')}&background=0284c7&color=fff&bold=true`,
+          createdAt: o.time || new Date().toISOString(),
+          totalOrders: 0,
+          totalAmountUSD: 0,
+          isBanned,
+          source: 'order'
+        });
+      }
+      const item = map.get(key)!;
+      item.totalOrders += 1;
+      item.totalAmountUSD += o.amountUSD || 0;
+      if (o.user && (!item.name || item.name === 'User' || item.name.startsWith('User '))) {
+        item.name = o.user;
+      }
+    });
+
+    // 3. Users from Chat Messages
+    chatMessages.forEach(msg => {
+      if (msg.sender === 'user' && msg.userEmail) {
+        const key = msg.userEmail.toLowerCase().trim();
+        if (!key) return;
+        const isBanned = Boolean(
+          bannedList.includes(key) || 
+          (msg.userId && bannedList.includes(msg.userId))
+        );
+        if (!map.has(key)) {
+          map.set(key, {
+            id: msg.userId || key,
+            name: msg.senderName && msg.senderName !== 'অ্যাডমিন' ? msg.senderName : key.split('@')[0],
+            email: msg.userEmail,
+            avatar: msg.userAvatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(msg.senderName || 'U')}&background=10b981&color=fff&bold=true`,
+            createdAt: msg.time,
+            totalOrders: 0,
+            totalAmountUSD: 0,
+            isBanned,
+            source: 'chat'
+          });
+        }
+        const item = map.get(key)!;
+        if (msg.userAvatar && !item.avatar) {
+          item.avatar = msg.userAvatar;
+        }
+        if (msg.senderName && msg.senderName !== 'অ্যাডমিন' && (!item.name || item.name === 'User')) {
+          item.name = msg.senderName;
+        }
+      }
+    });
+
+    // Recalculate order counts for all
+    map.forEach((item, key) => {
+      const userOrders = orders.filter(o => (o.email && o.email.toLowerCase() === key) || o.user === item.name);
+      item.totalOrders = userOrders.length;
+      item.totalAmountUSD = userOrders.reduce((sum, o) => sum + (o.amountUSD || 0), 0);
+    });
+
+    const list = Array.from(map.values());
+    list.sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
+    return list;
+  }, [registeredUsers, orders, chatMessages, adminSettings.bannedUsers]);
 
   // Compute distinct user chat threads
   const userThreads = useMemo(() => {
@@ -457,6 +593,22 @@ export default function AdminPanel({
           <ShoppingBag className="w-4 h-4" /> অর্ডার ম্যানেজমেন্ট ({orders.length})
           {pendingCount > 0 && (
             <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping ml-1" />
+          )}
+        </button>
+
+        <button
+          onClick={() => setActiveTab('users')}
+          className={`flex-1 min-w-[130px] py-3 px-4 rounded-xl text-xs font-black flex items-center justify-center gap-2 transition cursor-pointer relative ${
+            activeTab === 'users'
+              ? 'bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-lg'
+              : 'text-white/60 hover:text-white hover:bg-white/5'
+          }`}
+        >
+          <Users className="w-4 h-4" /> ইউজার তালিকা ({allUsersList.length})
+          {adminSettings.bannedUsers && adminSettings.bannedUsers.length > 0 && (
+            <span className="px-1.5 py-0.2 rounded-full bg-rose-500 text-white text-[9px] font-mono ml-1">
+              {adminSettings.bannedUsers.length} ব্যান
+            </span>
           )}
         </button>
 
@@ -1238,6 +1390,26 @@ export default function AdminPanel({
                       </div>
 
                       <div className="flex items-center gap-2 flex-wrap">
+                        {/* Quick Scroll Up Button */}
+                        <button
+                          type="button"
+                          onClick={scrollChatToTop}
+                          title="উপরে যান (Scroll to Top)"
+                          className="w-8 h-8 rounded-xl bg-white/5 hover:bg-white/15 text-white/70 hover:text-white flex items-center justify-center transition active:scale-90 cursor-pointer border border-white/10"
+                        >
+                          <ChevronUp className="w-4 h-4" />
+                        </button>
+
+                        {/* Quick Scroll Down Button */}
+                        <button
+                          type="button"
+                          onClick={scrollChatToBottom}
+                          title="নিচে যান (Scroll to Bottom)"
+                          className="w-8 h-8 rounded-xl bg-white/5 hover:bg-white/15 text-white/70 hover:text-white flex items-center justify-center transition active:scale-90 cursor-pointer border border-white/10"
+                        >
+                          <ChevronDown className="w-4 h-4" />
+                        </button>
+
                         {/* Ban / Unban User Button */}
                         <button
                           type="button"
@@ -1296,7 +1468,10 @@ export default function AdminPanel({
                     </div>
 
                     {/* Messages Body */}
-                    <div className="flex-1 p-5 overflow-y-auto space-y-3.5 scrollbar-thin scrollbar-thumb-white/10">
+                    <div 
+                      ref={chatMessagesContainerRef}
+                      className="flex-1 p-5 overflow-y-auto space-y-3.5 scrollbar-thin scrollbar-thumb-white/10 relative"
+                    >
                       {currentThreadMessages.length === 0 ? (
                         <div className="text-center text-white/40 py-24 space-y-2">
                           <Sparkles className="w-10 h-10 mx-auto text-emerald-400/40" />
@@ -1418,7 +1593,270 @@ export default function AdminPanel({
         </div>
       )}
 
-      {/* TAB 4: SITE SETTINGS & STATS */}
+      {/* TAB 4: USERS MANAGEMENT & BAN SYSTEM */}
+      {activeTab === 'users' && (
+        <div className="space-y-6">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div>
+              <h3 className="text-xl font-black text-white flex items-center gap-2">
+                <Users className="w-5 h-5 text-emerald-400" /> ইউজার ম্যানেজমেন্ট ও ব্যান সিস্টেম (User Accounts)
+              </h3>
+              <p className="text-xs text-white/50 mt-1">
+                সাইটের সকল রেজিস্টার্ড ইউজার ও কাস্টমারদের প্রোফাইল। এখান থেকে সহজে যে কাউকে ১-ক্লিকে ব্যান বা আনব্যান করুন।
+              </p>
+            </div>
+
+            {/* Quick Summary Badges */}
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 text-white/80 text-xs font-bold">
+                মোট ইউজার: <strong className="text-emerald-400 font-mono">{allUsersList.length}</strong>
+              </span>
+              <span className="px-3 py-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-xs font-bold">
+                সক্রিয়: <strong className="text-emerald-400 font-mono">{allUsersList.filter(u => !u.isBanned).length}</strong>
+              </span>
+              <span className="px-3 py-1.5 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-300 text-xs font-bold">
+                ব্যান করা: <strong className="text-rose-400 font-mono">{allUsersList.filter(u => u.isBanned).length}</strong>
+              </span>
+            </div>
+          </div>
+
+          {/* Search & Status Filter Toolbar */}
+          <div className="ios-glass p-4 rounded-2xl border border-white/10 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-[#0a1120]/70">
+            {/* Search Input */}
+            <div className="relative flex-1 max-w-md">
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
+              <input
+                type="text"
+                placeholder="ইউজারের নাম বা Gmail/ইমেইল দিয়ে খুঁজুন..."
+                value={userSearchQuery}
+                onChange={(e) => setUserSearchQuery(e.target.value)}
+                className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-xs text-white placeholder:text-white/40 focus:outline-none focus:border-emerald-500 transition"
+              />
+              {userSearchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setUserSearchQuery('')}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white p-1"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+
+            {/* Filter Tabs */}
+            <div className="flex items-center gap-1.5 bg-black/40 p-1 rounded-xl border border-white/5 shrink-0">
+              <button
+                type="button"
+                onClick={() => setUserFilter('all')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
+                  userFilter === 'all'
+                    ? 'bg-emerald-500 text-white shadow-sm'
+                    : 'text-white/60 hover:text-white'
+                }`}
+              >
+                সব ইউজার ({allUsersList.length})
+              </button>
+              <button
+                type="button"
+                onClick={() => setUserFilter('active')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
+                  userFilter === 'active'
+                    ? 'bg-emerald-500 text-white shadow-sm'
+                    : 'text-white/60 hover:text-white'
+                }`}
+              >
+                সক্রিয় ({allUsersList.filter(u => !u.isBanned).length})
+              </button>
+              <button
+                type="button"
+                onClick={() => setUserFilter('banned')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
+                  userFilter === 'banned'
+                    ? 'bg-rose-500 text-white shadow-sm'
+                    : 'text-white/60 hover:text-white'
+                }`}
+              >
+                ব্যান করা ({allUsersList.filter(u => u.isBanned).length})
+              </button>
+            </div>
+          </div>
+
+          {/* User Cards / List */}
+          {(() => {
+            const filteredUsers = allUsersList.filter(u => {
+              const matchesSearch = 
+                u.name.toLowerCase().includes(userSearchQuery.toLowerCase()) ||
+                u.email.toLowerCase().includes(userSearchQuery.toLowerCase()) ||
+                u.id.toLowerCase().includes(userSearchQuery.toLowerCase());
+              
+              if (!matchesSearch) return false;
+              if (userFilter === 'active') return !u.isBanned;
+              if (userFilter === 'banned') return u.isBanned;
+              return true;
+            });
+
+            if (filteredUsers.length === 0) {
+              return (
+                <div className="ios-glass p-12 rounded-3xl border border-white/10 text-center space-y-3 bg-[#0c1422]/60">
+                  <Users className="w-12 h-12 text-white/20 mx-auto" />
+                  <h4 className="text-base font-bold text-white/70">কোনো ইউজার পাওয়া যায়নি</h4>
+                  <p className="text-xs text-white/40 max-w-sm mx-auto">
+                    {userSearchQuery ? `"${userSearchQuery}" দিয়ে কোনো অ্যাকাউন্ট খুঁজে পাওয়া যায়নি।` : 'এখনো কোনো ইউজার সাইটে প্রবেশ করেনি।'}
+                  </p>
+                </div>
+              );
+            }
+
+            return (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {filteredUsers.map((user) => (
+                  <div
+                    key={user.id + user.email}
+                    className={`ios-glass p-5 rounded-2xl border transition-all duration-200 relative overflow-hidden flex flex-col justify-between space-y-4 ${
+                      user.isBanned
+                        ? 'border-rose-500/40 bg-gradient-to-br from-[#1e0508]/80 to-[#100305]/80 shadow-lg shadow-rose-950/30'
+                        : 'border-white/10 bg-[#0c1422]/70 hover:border-emerald-500/30 shadow-md'
+                    }`}
+                  >
+                    {/* User Top Info */}
+                    <div className="flex items-start gap-3.5">
+                      {/* Avatar */}
+                      <div className="relative shrink-0 mt-0.5">
+                        {user.avatar ? (
+                          <img
+                            src={user.avatar}
+                            alt={user.name}
+                            referrerPolicy="no-referrer"
+                            className={`w-12 h-12 rounded-2xl object-cover border-2 shadow-md ${
+                              user.isBanned ? 'border-rose-500/60 shadow-rose-950/50' : 'border-emerald-500/40 shadow-emerald-950/40'
+                            }`}
+                          />
+                        ) : (
+                          <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-black text-sm border-2 ${
+                            user.isBanned
+                              ? 'bg-rose-500/20 border-rose-500/40 text-rose-300'
+                              : 'bg-emerald-500/20 border-emerald-500/40 text-emerald-300'
+                          }`}>
+                            {user.name.charAt(0).toUpperCase()}
+                          </div>
+                        )}
+                        {user.isBanned && (
+                          <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-rose-500 text-white flex items-center justify-center text-[10px] shadow">
+                            <Ban className="w-3 h-3" />
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Name & Email */}
+                      <div className="flex-1 min-w-0 space-y-1">
+                        <div className="flex items-center justify-between gap-1">
+                          <h4 className="text-sm font-black text-white truncate">{user.name}</h4>
+                          <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase shrink-0 border ${
+                            user.isBanned
+                              ? 'bg-rose-500/20 text-rose-400 border-rose-500/40'
+                              : 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
+                          }`}>
+                            {user.isBanned ? 'ব্যান করা' : 'সক্রিয়'}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center gap-1.5 text-xs text-white/60 font-mono truncate">
+                          <Mail className="w-3 h-3 text-emerald-400 shrink-0" />
+                          <span className="truncate">{user.email}</span>
+                        </div>
+
+                        {user.createdAt && (
+                          <div className="flex items-center gap-1.5 text-[10px] text-white/40">
+                            <Calendar className="w-3 h-3 shrink-0" />
+                            <span>
+                              {new Date(user.createdAt).toLocaleDateString([], {
+                                year: 'numeric',
+                                month: 'short',
+                                day: 'numeric'
+                              })}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Stats & Orders Info */}
+                    <div className="grid grid-cols-2 gap-2 p-2.5 rounded-xl bg-black/40 border border-white/5 text-center text-xs">
+                      <div>
+                        <span className="text-[10px] text-white/40 uppercase font-bold block">মোট অর্ডার</span>
+                        <span className="text-sm font-black text-white font-mono">{user.totalOrders} টি</span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-white/40 uppercase font-bold block">মোট ভলিউম</span>
+                        <span className="text-sm font-black text-emerald-400 font-mono">${user.totalAmountUSD.toFixed(1)}</span>
+                      </div>
+                    </div>
+
+                    {/* Action Buttons: Ban/Unban, Chat, Copy Email */}
+                    <div className="flex items-center gap-2 pt-1 border-t border-white/5">
+                      {/* 1-Click Ban / Unban Button */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (onToggleBanUser) {
+                            onToggleBanUser(user.id || user.email);
+                          }
+                        }}
+                        className={`flex-1 py-2.5 px-3 rounded-xl text-xs font-black transition flex items-center justify-center gap-1.5 cursor-pointer border active:scale-95 ${
+                          user.isBanned
+                            ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40 hover:bg-emerald-500/30'
+                            : 'bg-rose-500/20 text-rose-300 border-rose-500/40 hover:bg-rose-500/30'
+                        }`}
+                      >
+                        {user.isBanned ? (
+                          <>
+                            <UserCheck className="w-4 h-4 text-emerald-400" />
+                            <span>আনব্যান করুন (Unban)</span>
+                          </>
+                        ) : (
+                          <>
+                            <UserX className="w-4 h-4 text-rose-400" />
+                            <span>ব্যান করুন (Ban)</span>
+                          </>
+                        )}
+                      </button>
+
+                      {/* Direct Chat with User */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSelectedChatUserId(user.id || user.email);
+                          setActiveTab('chat');
+                        }}
+                        className="py-2.5 px-3 rounded-xl bg-white/5 hover:bg-emerald-500/20 text-white/80 hover:text-emerald-300 text-xs font-bold transition flex items-center justify-center gap-1 cursor-pointer border border-white/10 active:scale-95"
+                        title="এই ইউজারের সাথে চ্যাট করুন"
+                      >
+                        <MessageSquare className="w-3.5 h-3.5 text-emerald-400" />
+                        <span>চ্যাট</span>
+                      </button>
+
+                      {/* Copy Email */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          navigator.clipboard.writeText(user.email);
+                          showToast('ইউজার ইমেইল কপি করা হয়েছে!', 'success');
+                        }}
+                        className="p-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-white/60 hover:text-white transition cursor-pointer border border-white/10 active:scale-95"
+                        title="ইমেইল কপি করুন"
+                      >
+                        <Mail className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            );
+          })()}
+        </div>
+      )}
+
+      {/* TAB 5: SITE SETTINGS & STATS */}
       {activeTab === 'settings' && (
         <div className="space-y-6">
           <div>

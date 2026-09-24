@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { MessageSquare, X, Send, Bot, User, Sparkles, Headphones, Paperclip, Image as ImageIcon, Loader2, ZoomIn } from 'lucide-react';
+import { MessageSquare, X, Send, Bot, User, Sparkles, Headphones, Paperclip, Image as ImageIcon, Loader2, ZoomIn, ChevronUp, ChevronDown } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ChatMessage, AdminSettings } from '../types';
 import { uploadImageToImgBB } from '../utils/imgbb';
@@ -9,20 +9,31 @@ interface LiveChatWidgetProps {
   onSendMessage: (text: string, userId?: string, userName?: string, userEmail?: string, imageUrl?: string, userAvatar?: string) => void;
   adminSettings: AdminSettings;
   currentUser?: { id?: string; name: string; email: string; avatar?: string } | null;
+  isOpenControlled?: boolean;
+  onToggleControlled?: (open: boolean) => void;
 }
 
 export default function LiveChatWidget({
   messages,
   onSendMessage,
   adminSettings,
-  currentUser
+  currentUser,
+  isOpenControlled,
+  onToggleControlled
 }: LiveChatWidgetProps) {
-  const [isOpen, setIsOpen] = useState(false);
+  const [internalIsOpen, setInternalIsOpen] = useState(false);
+  const isOpen = isOpenControlled !== undefined ? isOpenControlled : internalIsOpen;
+  const setIsOpen = (val: boolean) => {
+    setInternalIsOpen(val);
+    if (onToggleControlled) onToggleControlled(val);
+  };
+
   const [inputText, setInputText] = useState('');
   const [unreadCount, setUnreadCount] = useState(0);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [selectedImagePreview, setSelectedImagePreview] = useState<string | null>(null);
   const [previewModalUrl, setPreviewModalUrl] = useState<string | null>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -49,6 +60,12 @@ export default function LiveChatWidget({
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  const scrollToTop = () => {
+    if (messagesContainerRef.current) {
+      messagesContainerRef.current.scrollTo({ top: 0, behavior: 'smooth' });
+    }
   };
 
   useEffect(() => {
@@ -115,9 +132,8 @@ export default function LiveChatWidget({
               : 'bg-gradient-to-r from-rose-600 via-red-600 to-rose-500 hover:from-rose-500 hover:to-red-500 shadow-rose-950/70 border-rose-300/40'
           }`}
         >
-          {/* Light Dot and Headphone Icon together (closely placed with gap-1.5) */}
+          {/* Light Dot and Headphone Icon together */}
           <div className="flex items-center gap-1.5 shrink-0">
-            {/* 1. Green / Red status light (ota faste, close to icon) */}
             <span className="relative flex h-2 w-2 sm:h-2.5 sm:w-2.5 shrink-0 items-center justify-center">
               {adminSettings.online ? (
                 <>
@@ -132,7 +148,6 @@ export default function LiveChatWidget({
               )}
             </span>
 
-            {/* 2. Headphone Icon */}
             <div className="shrink-0 flex items-center justify-center">
               {isOpen ? (
                 <X className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
@@ -142,12 +157,10 @@ export default function LiveChatWidget({
             </div>
           </div>
 
-          {/* 3. Bengali text: অ্যাডমিন সাপোর্ট */}
           <span className="text-xs sm:text-sm font-black tracking-wide whitespace-nowrap drop-shadow-sm">
             অ্যাডমিন সাপোর্ট
           </span>
 
-          {/* Unread Message Counter Badge */}
           {unreadCount > 0 && !isOpen && (
             <span className={`ml-0.5 text-white text-[10px] font-black px-1.5 py-0.5 rounded-full border border-black/40 shadow-sm animate-bounce ${
               adminSettings.online ? 'bg-rose-500' : 'bg-amber-400 text-black'
@@ -174,24 +187,24 @@ export default function LiveChatWidget({
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 20, scale: 0.95 }}
               transition={{ type: 'spring', damping: 26, stiffness: 360 }}
-              className={`fixed bottom-40 md:bottom-24 left-1/2 -translate-x-1/2 md:left-auto md:translate-x-0 right-auto md:right-6 z-50 w-[calc(100vw-32px)] max-w-sm sm:w-96 h-[480px] max-h-[70vh] rounded-3xl bg-[#08121a]/95 backdrop-blur-2xl border shadow-2xl flex flex-col overflow-hidden text-white ${
+              className={`fixed bottom-40 md:bottom-24 left-1/2 -translate-x-1/2 md:left-auto md:translate-x-0 right-auto md:right-6 z-50 w-[calc(100vw-32px)] max-w-sm sm:w-96 h-[500px] max-h-[72vh] rounded-3xl bg-[#08121a]/95 backdrop-blur-2xl border shadow-2xl flex flex-col overflow-hidden text-white ${
                 adminSettings.online ? 'border-emerald-500/25 shadow-emerald-950/40' : 'border-rose-500/30 shadow-rose-950/50'
               }`}
             >
               {/* Header */}
-              <div className={`p-4 bg-gradient-to-r ${
+              <div className={`p-3.5 bg-gradient-to-r ${
                 adminSettings.online
                   ? 'from-emerald-950/80 via-teal-950/60 to-slate-900/90'
                   : 'from-rose-950/80 via-red-950/60 to-slate-900/90'
               } border-b border-white/10 flex items-center justify-between shrink-0`}>
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2.5">
                   <div className="relative">
-                    <div className={`w-10 h-10 rounded-full border flex items-center justify-center font-black ${
+                    <div className={`w-9 h-9 rounded-full border flex items-center justify-center font-black ${
                       adminSettings.online
                         ? 'bg-emerald-500/20 border-emerald-500/40 text-emerald-400'
                         : 'bg-rose-500/20 border-rose-500/40 text-rose-400'
                     }`}>
-                      <Sparkles className="w-5 h-5" />
+                      <Sparkles className="w-4 h-4" />
                     </div>
                     <span
                       className={`absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border border-[#08121a] ${
@@ -200,7 +213,7 @@ export default function LiveChatWidget({
                     />
                   </div>
                   <div>
-                    <h4 className="text-sm font-black text-white flex items-center gap-1.5">
+                    <h4 className="text-xs sm:text-sm font-black text-white flex items-center gap-1.5">
                       অ্যাডমিন সাপোর্ট
                     </h4>
                     <p className={`text-[10px] font-bold flex items-center gap-1.5 ${
@@ -218,16 +231,43 @@ export default function LiveChatWidget({
                   </div>
                 </div>
 
-                <button
-                  onClick={() => setIsOpen(false)}
-                  className="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-white/70 hover:text-white transition cursor-pointer"
-                >
-                  <X className="w-4 h-4" />
-                </button>
+                {/* Header Action Controls: Scroll Up/Down & Close */}
+                <div className="flex items-center gap-1.5">
+                  {/* Quick Scroll Up Button */}
+                  <button
+                    type="button"
+                    onClick={scrollToTop}
+                    title="উপরে যান (Scroll to Top)"
+                    className="w-7 h-7 rounded-lg bg-white/5 hover:bg-white/15 text-white/70 hover:text-white flex items-center justify-center transition active:scale-90 cursor-pointer border border-white/10"
+                  >
+                    <ChevronUp className="w-4 h-4" />
+                  </button>
+
+                  {/* Quick Scroll Down Button */}
+                  <button
+                    type="button"
+                    onClick={scrollToBottom}
+                    title="নিচে যান (Scroll to Bottom)"
+                    className="w-7 h-7 rounded-lg bg-white/5 hover:bg-white/15 text-white/70 hover:text-white flex items-center justify-center transition active:scale-90 cursor-pointer border border-white/10"
+                  >
+                    <ChevronDown className="w-4 h-4" />
+                  </button>
+
+                  {/* Close Chat Button */}
+                  <button
+                    onClick={() => setIsOpen(false)}
+                    className="w-7 h-7 rounded-lg bg-white/5 hover:bg-rose-500/20 flex items-center justify-center text-white/70 hover:text-rose-300 transition cursor-pointer border border-white/10"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
 
               {/* Chat Messages Body */}
-              <div className="flex-1 p-4 overflow-y-auto space-y-3 scrollbar-thin scrollbar-thumb-white/10">
+              <div 
+                ref={messagesContainerRef}
+                className="flex-1 p-4 overflow-y-auto space-y-3 scrollbar-thin scrollbar-thumb-white/10 relative"
+              >
                 {/* Default Welcome Message */}
                 <div className="flex items-start gap-2.5">
                   <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 text-xs font-bold border ${
