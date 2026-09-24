@@ -4,6 +4,7 @@ export interface User {
   email: string;
   avatar?: string;
   createdAt: string;
+  isBanned?: boolean;
 }
 
 export interface Currency {
@@ -56,6 +57,7 @@ export interface AdminSettings {
   adminPin?: string;        // Security PIN for admin panel (e.g. 1234)
   adminEmail?: string;      // Admin Login Email (e.g. admin@velopay.com)
   adminPassword?: string;   // Admin Login Password (e.g. admin1234)
+  bannedUsers?: string[];   // List of banned user IDs or emails
 }
 
 export interface ChatMessage {
@@ -68,4 +70,6 @@ export interface ChatMessage {
   text: string;
   time: string;
   read?: boolean;
+  imageUrl?: string;     // Screenshot or photo uploaded in chat
+  userAvatar?: string;   // User profile picture
 }

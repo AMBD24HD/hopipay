@@ -1,11 +1,12 @@
 import { useState, useRef, useEffect } from 'react';
-import { MessageSquare, X, Send, Bot, User, Sparkles, Headphones } from 'lucide-react';
+import { MessageSquare, X, Send, Bot, User, Sparkles, Headphones, Paperclip, Image as ImageIcon, Loader2, ZoomIn } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ChatMessage, AdminSettings } from '../types';
+import { uploadImageToImgBB } from '../utils/imgbb';
 
 interface LiveChatWidgetProps {
   messages: ChatMessage[];
-  onSendMessage: (text: string, userId?: string, userName?: string, userEmail?: string) => void;
+  onSendMessage: (text: string, userId?: string, userName?: string, userEmail?: string, imageUrl?: string, userAvatar?: string) => void;
   adminSettings: AdminSettings;
   currentUser?: { id?: string; name: string; email: string; avatar?: string } | null;
 }
@@ -19,7 +20,11 @@ export default function LiveChatWidget({
   const [isOpen, setIsOpen] = useState(false);
   const [inputText, setInputText] = useState('');
   const [unreadCount, setUnreadCount] = useState(0);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const [selectedImagePreview, setSelectedImagePreview] = useState<string | null>(null);
+  const [previewModalUrl, setPreviewModalUrl] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Generate persistent guest ID if user is not logged in
   const [guestId] = useState<string>(() => {
@@ -58,9 +63,40 @@ export default function LiveChatWidget({
 
   const handleSend = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!inputText.trim()) return;
-    onSendMessage(inputText.trim(), effectiveUserId, effectiveUserName, effectiveUserEmail);
+    if (!inputText.trim() && !selectedImagePreview) return;
+    onSendMessage(
+      inputText.trim() || '📷 ছবি/স্ক্রিনশট', 
+      effectiveUserId, 
+      effectiveUserName, 
+      effectiveUserEmail,
+      selectedImagePreview || undefined,
+      currentUser?.avatar
+    );
     setInputText('');
+    setSelectedImagePreview(null);
+  };
+
+  const handleImageFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    const file = files[0];
+    e.target.value = '';
+
+    if (!file.type.startsWith('image/')) {
+      alert('অনুগ্রহ করে একটি ছবি ফাইল (JPG, PNG, WebP) নির্বাচন করুন');
+      return;
+    }
+
+    setIsUploadingImage(true);
+    try {
+      const uploadedUrl = await uploadImageToImgBB(file);
+      setSelectedImagePreview(uploadedUrl);
+    } catch (err: any) {
+      console.error('Chat image upload error:', err);
+      alert(err?.message || 'ছবি আপলোড করতে ব্যর্থ হয়েছে!');
+    } finally {
+      setIsUploadingImage(false);
+    }
   };
 
   return (
@@ -212,19 +248,28 @@ export default function LiveChatWidget({
                 {/* Dynamic Messages */}
                 {myMessages.map((msg) => {
                   const isUser = msg.sender === 'user';
+                  const avatarUrl = msg.userAvatar || (isUser ? currentUser?.avatar : undefined);
                   return (
                     <div
                       key={msg.id}
                       className={`flex items-start gap-2 ${isUser ? 'flex-row-reverse' : 'flex-row'}`}
                     >
                       <div
-                        className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 text-xs font-bold ${
+                        className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 text-xs font-bold overflow-hidden border ${
                           isUser
-                            ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30'
-                            : (adminSettings.online ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-rose-500/20 text-rose-400 border border-rose-500/30')
+                            ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30'
+                            : (adminSettings.online ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' : 'bg-rose-500/20 text-rose-400 border-rose-500/30')
                         }`}
                       >
-                        {isUser ? <User className="w-3.5 h-3.5" /> : <Bot className="w-3.5 h-3.5" />}
+                        {isUser ? (
+                          avatarUrl ? (
+                            <img src={avatarUrl} alt="User" referrerPolicy="no-referrer" className="w-full h-full object-cover" />
+                          ) : (
+                            <User className="w-3.5 h-3.5" />
+                          )
+                        ) : (
+                          <Bot className="w-3.5 h-3.5" />
+                        )}
                       </div>
 
                       <div
@@ -238,13 +283,33 @@ export default function LiveChatWidget({
                           <span className="text-[9px] font-black opacity-75">
                             {isUser ? (currentUser?.name || 'আপনি') : 'অ্যাডমিন'}
                           </span>
-                          <span className="text-[8px] opacity-60">
+                          <span className="text-[8px] opacity-60 font-mono">
                             {new Date(msg.time).toLocaleTimeString([], {
                               hour: '2-digit',
                               minute: '2-digit'
                             })}
                           </span>
                         </div>
+
+                        {/* Image Attachment (Photo / Screenshot) */}
+                        {msg.imageUrl && (
+                          <div
+                            onClick={() => setPreviewModalUrl(msg.imageUrl!)}
+                            className="mt-1 mb-1.5 rounded-xl overflow-hidden border border-white/20 relative group cursor-pointer max-w-[200px]"
+                            title="ছবি বড় করে দেখতে ক্লিক করুন"
+                          >
+                            <img
+                              src={msg.imageUrl}
+                              alt="Attachment"
+                              referrerPolicy="no-referrer"
+                              className="w-full max-h-36 object-cover transition-transform group-hover:scale-105"
+                            />
+                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition">
+                              <ZoomIn className="w-5 h-5 text-white" />
+                            </div>
+                          </div>
+                        )}
+
                         <p className="break-words">{msg.text}</p>
                       </div>
                     </div>
@@ -253,32 +318,97 @@ export default function LiveChatWidget({
                 <div ref={messagesEndRef} />
               </div>
 
-              {/* Input Form */}
-              <form
-                onSubmit={handleSend}
-                className="p-3 bg-black/40 border-t border-white/10 flex items-center gap-2 shrink-0"
-              >
-                <input
-                  type="text"
-                  placeholder="মেসেজ লিখুন..."
-                  value={inputText}
-                  onChange={(e) => setInputText(e.target.value)}
-                  className={`flex-1 px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-xs text-white placeholder-white/40 focus:outline-none transition ${
-                    adminSettings.online ? 'focus:border-emerald-500' : 'focus:border-rose-500'
-                  }`}
-                />
-                <button
-                  type="submit"
-                  disabled={!inputText.trim()}
-                  className={`w-10 h-10 rounded-xl text-white flex items-center justify-center transition cursor-pointer shadow-md disabled:opacity-40 ${
-                    adminSettings.online
-                      ? 'bg-emerald-500 hover:bg-emerald-400 shadow-emerald-500/20'
-                      : 'bg-rose-500 hover:bg-rose-400 shadow-rose-500/20'
-                  }`}
+              {/* Hidden File Picker for Image Upload */}
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleImageFileSelect}
+                accept="image/png, image/jpeg, image/webp, image/gif"
+                className="hidden"
+              />
+
+              {/* Input Form & Preview */}
+              <div className="p-3 bg-black/40 border-t border-white/10 shrink-0">
+                {/* Image selected preview bar */}
+                {selectedImagePreview && (
+                  <div className="relative px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/30 rounded-xl flex items-center gap-2 mb-2">
+                    <img src={selectedImagePreview} alt="Preview" className="w-7 h-7 rounded-lg object-cover" />
+                    <span className="text-[10px] text-emerald-300 font-bold truncate flex-1">ছবি আপলোড সম্পন্ন, মেসেজ পাঠান</span>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedImagePreview(null)}
+                      className="text-white/60 hover:text-white p-1 cursor-pointer"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                )}
+
+                <form onSubmit={handleSend} className="flex items-center gap-2">
+                  {/* Photo / Screenshot Upload Button */}
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={isUploadingImage}
+                    className="w-10 h-10 rounded-xl bg-white/5 hover:bg-white/10 text-white/70 hover:text-white flex items-center justify-center transition cursor-pointer shrink-0 border border-white/10 active:scale-95 disabled:opacity-50"
+                    title="সমস্যা বা পেমেন্টের স্ক্রিনশট/ছবি আপলোড করুন"
+                  >
+                    {isUploadingImage ? (
+                      <Loader2 className="w-4 h-4 animate-spin text-emerald-400" />
+                    ) : (
+                      <Paperclip className="w-4 h-4 text-emerald-400" />
+                    )}
+                  </button>
+
+                  <input
+                    type="text"
+                    placeholder={selectedImagePreview ? "ছবির সাথে ক্যাপশন লিখুন..." : "মেসেজ লিখুন..."}
+                    value={inputText}
+                    onChange={(e) => setInputText(e.target.value)}
+                    className={`flex-1 px-3.5 py-2.5 rounded-xl bg-white/5 border border-white/10 text-xs text-white placeholder-white/40 focus:outline-none transition ${
+                      adminSettings.online ? 'focus:border-emerald-500' : 'focus:border-rose-500'
+                    }`}
+                  />
+
+                  <button
+                    type="submit"
+                    disabled={!inputText.trim() && !selectedImagePreview}
+                    className={`w-10 h-10 rounded-xl text-white flex items-center justify-center transition cursor-pointer shadow-md disabled:opacity-40 shrink-0 ${
+                      adminSettings.online
+                        ? 'bg-emerald-500 hover:bg-emerald-400 shadow-emerald-500/20'
+                        : 'bg-rose-500 hover:bg-rose-400 shadow-rose-500/20'
+                    }`}
+                  >
+                    <Send className="w-4 h-4" />
+                  </button>
+                </form>
+              </div>
+
+              {/* Full Lightbox Preview Modal */}
+              {previewModalUrl && (
+                <div
+                  className="fixed inset-0 z-60 bg-black/90 backdrop-blur-md flex items-center justify-center p-4"
+                  onClick={() => setPreviewModalUrl(null)}
                 >
-                  <Send className="w-4 h-4" />
-                </button>
-              </form>
+                  <div
+                    className="relative max-w-lg max-h-[85vh] bg-[#0c1420] rounded-2xl overflow-hidden border border-white/20 p-2 shadow-2xl"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <button
+                      onClick={() => setPreviewModalUrl(null)}
+                      className="absolute top-4 right-4 z-10 w-8 h-8 rounded-full bg-black/70 text-white flex items-center justify-center hover:bg-black/90 cursor-pointer"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                    <img
+                      src={previewModalUrl}
+                      alt="Full Screenshot"
+                      referrerPolicy="no-referrer"
+                      className="max-w-full max-h-[80vh] object-contain rounded-lg"
+                    />
+                  </div>
+                </div>
+              )}
             </motion.div>
           </>
         )}

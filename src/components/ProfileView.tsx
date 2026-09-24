@@ -10,7 +10,9 @@ import {
   Phone, 
   CheckCircle2,
   Camera,
-  Loader2
+  Loader2,
+  Ban,
+  AlertCircle
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { uploadImageToImgBB } from '../utils/imgbb';
@@ -213,9 +215,15 @@ export default function ProfileView({
                 </p>
 
                 <div className="pt-2 flex flex-wrap items-center justify-center sm:justify-start gap-2">
-                  <span className="bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-[11px] font-bold px-3 py-1 rounded-full inline-flex items-center gap-1.5 shadow-sm">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" /> Verified Account
-                  </span>
+                  {user.isBanned ? (
+                    <span className="bg-rose-500/20 border border-rose-500/50 text-rose-300 text-[11px] font-black px-3 py-1 rounded-full inline-flex items-center gap-1.5 shadow-lg shadow-rose-950/50 animate-pulse">
+                      <Ban className="w-3.5 h-3.5 text-rose-400" /> অ্যাকাউন্ট ব্যান করা (BANNED)
+                    </span>
+                  ) : (
+                    <span className="bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-[11px] font-bold px-3 py-1 rounded-full inline-flex items-center gap-1.5 shadow-sm">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" /> Verified Account
+                    </span>
+                  )}
                 </div>
               </div>
             </div>
@@ -229,6 +237,32 @@ export default function ProfileView({
                 <LogOut className="w-4 h-4" /> লগআউট (Logout)
               </button>
             </div>
+          </div>
+        </motion.div>
+      )}
+
+      {/* Prominent Red Alert Card if User Account is Banned */}
+      {user.isBanned && (
+        <motion.div
+          initial={{ opacity: 0, scale: 0.98 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="p-5 sm:p-6 rounded-[24px] bg-gradient-to-r from-rose-950/95 via-[#23050a]/95 to-[#150205]/95 border-2 border-rose-500/60 shadow-2xl shadow-rose-950/80 flex items-start gap-4 text-rose-100 relative overflow-hidden"
+        >
+          <div className="w-12 h-12 rounded-2xl bg-rose-500/20 border border-rose-500/40 flex items-center justify-center text-rose-400 shrink-0 shadow-inner mt-0.5">
+            <Ban className="w-6 h-6 text-rose-400" />
+          </div>
+          <div className="space-y-1.5 flex-1">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h4 className="text-base sm:text-lg font-black text-rose-300 tracking-tight">
+                আপনার অ্যাকাউন্টটি সাময়িকভাবে ব্যান/স্থগিত করা হয়েছে (Account Banned)
+              </h4>
+              <span className="px-2 py-0.5 rounded-md bg-rose-500 text-white font-black text-[10px] tracking-wider uppercase">
+                সব সার্ভিস বন্ধ
+              </span>
+            </div>
+            <p className="text-xs sm:text-sm text-rose-200/90 font-medium leading-relaxed">
+              অ্যাডমিন কর্তৃপক্ষ কর্তৃক এই অ্যাকাউন্টটি স্থগিত রাখা হয়েছে। ফলে সকল নতুন ডলার ক্রয়-বিক্রয় ও লেনদেন সাময়িকভাবে বন্ধ আছে। অ্যাকাউন্ট সম্পর্কিত সহায়তার জন্য লাইভ চ্যাটে অ্যাডমিনের সাথে কথা বলুন।
+            </p>
           </div>
         </motion.div>
       )}

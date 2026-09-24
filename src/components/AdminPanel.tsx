@@ -34,7 +34,11 @@ import {
   ChevronLeft,
   MessageCircle,
   User as UserIcon,
-  Sparkles
+  Sparkles,
+  UserX,
+  UserCheck,
+  ZoomIn,
+  Ban
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { uploadImageToImgBB } from '../utils/imgbb';
@@ -51,6 +55,8 @@ interface AdminPanelProps {
   onDeleteOrder?: (id: string) => void;
   onDeleteCurrency?: (id: string) => void;
   onSendAdminChatMessage: (text: string, targetUserId?: string, userEmail?: string, userName?: string) => void;
+  onClearUserChat?: (targetUserId: string, targetUserEmail?: string) => void;
+  onToggleBanUser?: (userIdOrEmail: string) => void;
   onCloseAdmin: () => void;
   onLogoutAdmin?: () => void;
   showToast: (text: string, type: 'success' | 'error' | 'info') => void;
@@ -77,6 +83,8 @@ export default function AdminPanel({
   onDeleteOrder,
   onDeleteCurrency,
   onSendAdminChatMessage,
+  onClearUserChat,
+  onToggleBanUser,
   onCloseAdmin,
   onLogoutAdmin,
   showToast
@@ -89,6 +97,7 @@ export default function AdminPanel({
   // Separate Per-User Chat states
   const [selectedChatUserId, setSelectedChatUserId] = useState<string | null>(null);
   const [chatSearchQuery, setChatSearchQuery] = useState('');
+  const [previewModalUrl, setPreviewModalUrl] = useState<string | null>(null);
   const chatMessagesEndRef = useRef<HTMLDivElement>(null);
 
   // Editing state for currencies
@@ -109,24 +118,39 @@ export default function AdminPanel({
       userId: string;
       userName: string;
       userEmail: string;
+      userAvatar?: string;
       lastMessage?: ChatMessage;
       unreadCount: number;
       totalOrders: number;
+      isBanned: boolean;
     }>();
+
+    const bannedList = adminSettings.bannedUsers || [];
 
     // 1. Group from chatMessages
     chatMessages.forEach(msg => {
       const uId = msg.userId || (msg.sender === 'user' ? msg.userEmail : msg.targetUserId) || 'guest';
+      const isBanned = Boolean(
+        bannedList.includes(uId) || 
+        bannedList.includes(msg.userEmail) || 
+        (msg.userId && bannedList.includes(msg.userId))
+      );
+
       if (!map.has(uId)) {
         map.set(uId, {
           userId: uId,
           userName: msg.senderName && msg.senderName !== 'অ্যাডমিন' ? msg.senderName : (msg.userEmail.split('@')[0] || 'User'),
           userEmail: msg.userEmail,
+          userAvatar: msg.userAvatar,
           unreadCount: 0,
-          totalOrders: orders.filter(o => o.email === msg.userEmail).length
+          totalOrders: orders.filter(o => o.email === msg.userEmail).length,
+          isBanned
         });
       }
       const thread = map.get(uId)!;
+      if (msg.userAvatar && !thread.userAvatar) {
+        thread.userAvatar = msg.userAvatar;
+      }
       if (!thread.lastMessage || new Date(msg.time).getTime() > new Date(thread.lastMessage.time).getTime()) {
         thread.lastMessage = msg;
       }
@@ -138,13 +162,16 @@ export default function AdminPanel({
     // 2. Also incorporate users from orders so admin can chat with any customer
     orders.forEach(order => {
       const uId = order.email;
+      const isBanned = Boolean(bannedList.includes(uId) || bannedList.includes(order.email));
       if (!map.has(uId)) {
         map.set(uId, {
           userId: uId,
           userName: order.user || order.email.split('@')[0],
           userEmail: order.email,
+          userAvatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(order.user || 'U')}&background=10b981&color=fff`,
           unreadCount: 0,
-          totalOrders: orders.filter(o => o.email === order.email).length
+          totalOrders: orders.filter(o => o.email === order.email).length,
+          isBanned
         });
       } else {
         const thread = map.get(uId)!;
@@ -162,7 +189,7 @@ export default function AdminPanel({
       return timeB - timeA;
     });
     return list;
-  }, [chatMessages, orders]);
+  }, [chatMessages, orders, adminSettings.bannedUsers]);
 
   // Auto-select first thread if none is selected
   useEffect(() => {
@@ -1080,13 +1107,22 @@ export default function AdminPanel({
                         >
                           {/* User Avatar */}
                           <div className="relative shrink-0 mt-0.5">
-                            <div className={`w-10 h-10 rounded-full flex items-center justify-center font-black text-xs border ${
-                              isSelected
-                                ? 'bg-emerald-500/30 text-emerald-300 border-emerald-400/50 shadow-md shadow-emerald-500/20'
-                                : 'bg-white/10 text-white/80 border-white/10'
-                            }`}>
-                              {thread.userName.charAt(0).toUpperCase()}
-                            </div>
+                            {thread.userAvatar ? (
+                              <img
+                                src={thread.userAvatar}
+                                alt={thread.userName}
+                                referrerPolicy="no-referrer"
+                                className="w-10 h-10 rounded-full object-cover border border-white/10"
+                              />
+                            ) : (
+                              <div className={`w-10 h-10 rounded-full flex items-center justify-center font-black text-xs border ${
+                                isSelected
+                                  ? 'bg-emerald-500/30 text-emerald-300 border-emerald-400/50 shadow-md shadow-emerald-500/20'
+                                  : 'bg-white/10 text-white/80 border-white/10'
+                              }`}>
+                                {thread.userName.charAt(0).toUpperCase()}
+                              </div>
+                            )}
                             {thread.unreadCount > 0 && (
                               <span className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-rose-500 border-2 border-[#0c1422] animate-ping" />
                             )}
@@ -1095,9 +1131,16 @@ export default function AdminPanel({
                           {/* User Info & Message Snippet */}
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center justify-between gap-1 mb-0.5">
-                              <h4 className={`text-xs font-black truncate ${isSelected ? 'text-emerald-300' : 'text-white'}`}>
-                                {thread.userName}
-                              </h4>
+                              <div className="flex items-center gap-1.5 min-w-0">
+                                <h4 className={`text-xs font-black truncate ${isSelected ? 'text-emerald-300' : 'text-white'}`}>
+                                  {thread.userName}
+                                </h4>
+                                {thread.isBanned && (
+                                  <span className="px-1.5 py-0.2 rounded-full bg-rose-500/20 text-rose-400 border border-rose-500/40 text-[8px] font-black uppercase shrink-0">
+                                    BANNED
+                                  </span>
+                                )}
+                              </div>
                               {thread.lastMessage && (
                                 <span className="text-[9px] text-white/40 shrink-0 font-mono">
                                   {new Date(thread.lastMessage.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -1160,26 +1203,84 @@ export default function AdminPanel({
                 return (
                   <>
                     {/* Active Conversation Top Bar */}
-                    <div className="p-4 border-b border-white/10 bg-white/[0.02] flex items-center justify-between shrink-0">
+                    <div className="p-4 border-b border-white/10 bg-white/[0.02] flex flex-wrap items-center justify-between gap-3 shrink-0">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 flex items-center justify-center font-black text-sm shadow-md">
-                          {currentThread.userName.charAt(0).toUpperCase()}
-                        </div>
+                        {currentThread.userAvatar ? (
+                          <img
+                            src={currentThread.userAvatar}
+                            alt={currentThread.userName}
+                            referrerPolicy="no-referrer"
+                            className="w-11 h-11 rounded-full object-cover border border-emerald-500/40 shadow-md shadow-emerald-500/20"
+                          />
+                        ) : (
+                          <div className="w-11 h-11 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 flex items-center justify-center font-black text-sm shadow-md">
+                            {currentThread.userName.charAt(0).toUpperCase()}
+                          </div>
+                        )}
                         <div>
                           <div className="flex items-center gap-2">
                             <h4 className="text-sm font-black text-white">{currentThread.userName}</h4>
                             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                            {currentThread.totalOrders > 0 && (
-                              <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-[10px] font-black border border-emerald-500/30">
-                                {currentThread.totalOrders} টি অর্ডার
+                            {currentThread.isBanned ? (
+                              <span className="px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-400 text-[10px] font-black border border-rose-500/40 animate-pulse">
+                                অ্যাকাউন্ট ব্যান করা (BANNED)
                               </span>
+                            ) : (
+                              currentThread.totalOrders > 0 && (
+                                <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-[10px] font-black border border-emerald-500/30">
+                                  {currentThread.totalOrders} টি অর্ডার
+                                </span>
+                              )
                             )}
                           </div>
                           <p className="text-xs text-white/50 font-mono">{currentThread.userEmail}</p>
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        {/* Ban / Unban User Button */}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (onToggleBanUser) {
+                              onToggleBanUser(currentThread.userId || currentThread.userEmail);
+                            }
+                          }}
+                          className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer border active:scale-95 ${
+                            currentThread.isBanned
+                              ? 'bg-rose-500/20 text-rose-300 border-rose-500/50 hover:bg-rose-500/30'
+                              : 'bg-white/5 text-rose-300/80 border-rose-500/30 hover:bg-rose-500/20 hover:text-white'
+                          }`}
+                          title={currentThread.isBanned ? 'অ্যাকাউন্ট আনব্যান করুন' : 'অ্যাকাউন্ট ব্যান করুন'}
+                        >
+                          {currentThread.isBanned ? (
+                            <>
+                              <UserCheck className="w-3.5 h-3.5 text-emerald-400" />
+                              <span className="text-emerald-300">আনব্যান (Unban)</span>
+                            </>
+                          ) : (
+                            <>
+                              <UserX className="w-3.5 h-3.5 text-rose-400" />
+                              <span>ব্যান করুন (Ban)</span>
+                            </>
+                          )}
+                        </button>
+
+                        {/* Clear Chat Button */}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (onClearUserChat) {
+                              onClearUserChat(currentThread.userId, currentThread.userEmail);
+                            }
+                          }}
+                          className="px-3 py-1.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-300 hover:text-white text-xs font-bold transition flex items-center gap-1.5 cursor-pointer active:scale-95"
+                          title="এই ইউজারের সাথে পূর্বের সব চ্যাট ক্লিয়ার করুন"
+                        >
+                          <Trash2 className="w-3.5 h-3.5 text-rose-400" />
+                          <span>চ্যাট ক্লিয়ার</span>
+                        </button>
+
                         {/* Copy User Email */}
                         <button
                           type="button"
@@ -1187,7 +1288,7 @@ export default function AdminPanel({
                             navigator.clipboard.writeText(currentThread.userEmail);
                             showToast('ইমেইল কপি করা হয়েছে!', 'success');
                           }}
-                          className="px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-white/70 hover:text-white text-xs font-bold transition flex items-center gap-1.5 cursor-pointer"
+                          className="px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-white/70 hover:text-white text-xs font-bold transition flex items-center gap-1.5 cursor-pointer border border-white/10"
                         >
                           ইমেইল কপি
                         </button>
@@ -1205,25 +1306,64 @@ export default function AdminPanel({
                       ) : (
                         currentThreadMessages.map((msg) => {
                           const isAdmin = msg.sender === 'admin';
+                          const avatar = msg.userAvatar || currentThread.userAvatar;
                           return (
                             <div
                               key={msg.id}
-                              className={`flex flex-col ${isAdmin ? 'items-end' : 'items-start'}`}
+                              className={`flex items-start gap-2.5 ${isAdmin ? 'flex-row-reverse' : 'flex-row'}`}
                             >
-                              <div className="flex items-center gap-2 mb-1 px-1">
-                                <span className={`text-[10px] font-bold ${isAdmin ? 'text-emerald-400' : 'text-cyan-400'}`}>
-                                  {isAdmin ? 'অ্যাডমিন (আপনি)' : (msg.senderName || currentThread.userName)}
-                                </span>
-                                <span className="text-[9px] text-white/30 font-mono">
-                                  {new Date(msg.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                </span>
+                              {/* Avatar beside message */}
+                              <div className="shrink-0 mt-1">
+                                {isAdmin ? (
+                                  <div className="w-7 h-7 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 flex items-center justify-center text-xs font-black shadow-sm">
+                                    👑
+                                  </div>
+                                ) : (
+                                  avatar ? (
+                                    <img src={avatar} alt="User" referrerPolicy="no-referrer" className="w-7 h-7 rounded-full object-cover border border-white/20 shadow-sm" />
+                                  ) : (
+                                    <div className="w-7 h-7 rounded-full bg-cyan-500/20 border border-cyan-500/30 text-cyan-300 flex items-center justify-center text-[10px] font-black">
+                                      {currentThread.userName.charAt(0).toUpperCase()}
+                                    </div>
+                                  )
+                                )}
                               </div>
-                              <div className={`max-w-md p-3.5 rounded-2xl text-xs leading-relaxed break-words shadow-md ${
-                                isAdmin
-                                  ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-tr-sm'
-                                  : 'bg-white/10 border border-white/10 text-white rounded-tl-sm'
-                              }`}>
-                                {msg.text}
+
+                              <div className={`flex flex-col ${isAdmin ? 'items-end' : 'items-start'} max-w-[85%]`}>
+                                <div className="flex items-center gap-2 mb-1 px-1">
+                                  <span className={`text-[10px] font-bold ${isAdmin ? 'text-emerald-400' : 'text-cyan-400'}`}>
+                                    {isAdmin ? 'অ্যাডমিন (আপনি)' : (msg.senderName || currentThread.userName)}
+                                  </span>
+                                  <span className="text-[9px] text-white/30 font-mono">
+                                    {new Date(msg.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                  </span>
+                                </div>
+
+                                <div className={`p-3.5 rounded-2xl text-xs leading-relaxed break-words shadow-md ${
+                                  isAdmin
+                                    ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-tr-sm'
+                                    : 'bg-white/10 border border-white/10 text-white rounded-tl-sm'
+                                }`}>
+                                  {/* Image attachment if user uploaded photo / screenshot */}
+                                  {msg.imageUrl && (
+                                    <div 
+                                      onClick={() => setPreviewModalUrl(msg.imageUrl!)}
+                                      className="mb-2 rounded-xl overflow-hidden border border-white/20 relative group cursor-pointer max-w-[240px]"
+                                      title="ছবি বড় করে দেখতে ক্লিক করুন"
+                                    >
+                                      <img 
+                                        src={msg.imageUrl} 
+                                        alt="Attachment" 
+                                        referrerPolicy="no-referrer"
+                                        className="w-full max-h-48 object-cover transition-transform group-hover:scale-105" 
+                                      />
+                                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition">
+                                        <ZoomIn className="w-5 h-5 text-white" />
+                                      </div>
+                                    </div>
+                                  )}
+                                  <p>{msg.text}</p>
+                                </div>
                               </div>
                             </div>
                           );
@@ -1700,6 +1840,32 @@ export default function AdminPanel({
               </button>
             </div>
           </form>
+        </div>
+      )}
+
+      {/* Lightbox Preview Modal for Chat Images */}
+      {previewModalUrl && (
+        <div
+          className="fixed inset-0 z-[200] bg-black/90 backdrop-blur-md flex items-center justify-center p-4"
+          onClick={() => setPreviewModalUrl(null)}
+        >
+          <div
+            className="relative max-w-2xl max-h-[85vh] bg-[#0c1420] rounded-2xl overflow-hidden border border-white/20 p-2 shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={() => setPreviewModalUrl(null)}
+              className="absolute top-4 right-4 z-10 w-8 h-8 rounded-full bg-black/70 text-white flex items-center justify-center hover:bg-black/90 cursor-pointer"
+            >
+              <X className="w-4 h-4" />
+            </button>
+            <img
+              src={previewModalUrl}
+              alt="Screenshot"
+              referrerPolicy="no-referrer"
+              className="max-w-full max-h-[80vh] object-contain rounded-lg"
+            />
+          </div>
         </div>
       )}
     </div>

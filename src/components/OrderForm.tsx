@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Currency, Order, AdminSettings } from '../types';
-import { Copy, Check, DollarSign, Smartphone, Key, ArrowRight, ArrowDownUp, Landmark } from 'lucide-react';
+import { Copy, Check, DollarSign, Smartphone, Key, ArrowRight, ArrowDownUp, Landmark, Ban, AlertCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { INITIAL_SETTINGS } from '../data/mockData';
 import { renderCurrencyVisual } from './CurrencyList';
@@ -11,6 +11,7 @@ interface OrderFormProps {
   initialSelectedCurrencyId?: string;
   initialOrderType?: 'buy' | 'sell';
   adminSettings?: AdminSettings;
+  isBanned?: boolean;
   onOrderSubmit: (orderData: Omit<Order, 'id' | 'user' | 'email' | 'status' | 'time'>) => void;
   showToast: (text: string, type: 'success' | 'error' | 'info') => void;
 }
@@ -20,6 +21,7 @@ export default function OrderForm({
   initialSelectedCurrencyId, 
   initialOrderType = 'sell',
   adminSettings = INITIAL_SETTINGS,
+  isBanned = false,
   onOrderSubmit, 
   showToast 
 }: OrderFormProps) {

@@ -21,7 +21,8 @@ import {
   AlertCircle,
   Mail,
   Eye,
-  EyeOff
+  EyeOff,
+  Ban
 } from 'lucide-react';
 
 import { User, Order, Currency, AdminSettings, ChatMessage } from './types';
@@ -526,10 +527,18 @@ export default function App() {
   };
 
   // Live Chat Handlers
-  const handleUserSendChatMessage = async (text: string, userId?: string, userName?: string, userEmail?: string) => {
+  const handleUserSendChatMessage = async (
+    text: string, 
+    userId?: string, 
+    userName?: string, 
+    userEmail?: string,
+    imageUrl?: string,
+    userAvatar?: string
+  ) => {
     const senderUserId = userId || currentUser?.id || currentUser?.email || 'guest_' + Date.now();
     const senderUserName = userName || currentUser?.name || 'কাস্টমার';
     const senderUserEmail = userEmail || currentUser?.email || `${senderUserId}@guest.velopay.com`;
+    const senderAvatar = userAvatar || currentUser?.avatar;
 
     const newMsg: ChatMessage = {
       id: 'msg-' + Date.now() + '-' + Math.floor(Math.random() * 1000),
@@ -540,7 +549,9 @@ export default function App() {
       targetUserId: senderUserId,
       text,
       time: new Date().toISOString(),
-      read: false
+      read: false,
+      imageUrl: imageUrl || undefined,
+      userAvatar: senderAvatar || undefined
     };
 
     setChatMessages(prev => [...prev, newMsg]);
@@ -563,7 +574,7 @@ export default function App() {
           userEmail: 'support@velopay.com',
           userId: senderUserId,
           targetUserId: senderUserId,
-          text: 'ধন্যবাদ! অ্যাডমিন বর্তমানে অফলাইনে আছেন। আপনার মেসেজ সংরক্ষিত হয়েছে, অনলাইনে এসে দ্রুত রিপ্লাই দেয়া হবে। জরুরি প্রয়োজনে হোয়াটসঅ্যাপে মেসেজ করুন।',
+          text: 'ধন্যবাদ! অ্যাডমিন বর্তমানে অফলাইনে আছেন। আপনার মেসেজ ও ছবি সংরক্ষিত হয়েছে, অনলাইনে এসে দ্রুত রিপ্লাই দেয়া হবে। জরুরি প্রয়োজনে হোয়াটসঅ্যাপে মেসেজ করুন।',
           time: new Date().toISOString(),
           read: true
         };
@@ -574,6 +585,71 @@ export default function App() {
           } catch (e) {}
         }
       }, 1000);
+    }
+  };
+
+  const handleClearUserChat = async (targetUserId: string, targetUserEmail?: string) => {
+    const confirmed = window.confirm('আপনি কি নিশ্চিত যে এই ইউজারের সমস্ত চ্যাট ও ছবি ক্লিয়ার করতে চান?');
+    if (!confirmed) return;
+
+    // Filter out messages belonging to this user
+    const messagesToDelete = chatMessages.filter(
+      msg =>
+        msg.userId === targetUserId ||
+        msg.targetUserId === targetUserId ||
+        (targetUserEmail && msg.userEmail === targetUserEmail)
+    );
+
+    setChatMessages(prev =>
+      prev.filter(
+        msg =>
+          msg.userId !== targetUserId &&
+          msg.targetUserId !== targetUserId &&
+          (!targetUserEmail || msg.userEmail !== targetUserEmail)
+      )
+    );
+
+    if (db && messagesToDelete.length > 0) {
+      try {
+        for (const msg of messagesToDelete) {
+          await deleteDoc(doc(db, 'chats', msg.id));
+        }
+        showToast('ইউজারের চ্যাট হিস্ট্রি সফলভাবে ক্লিয়ার করা হয়েছে!', 'success');
+      } catch (e) {
+        console.error('Error clearing chat from Firestore:', e);
+        showToast('Firestore থেকে চ্যাট মুছে ফেলতে সমস্যা হয়েছে', 'error');
+      }
+    } else {
+      showToast('চ্যাট হিস্ট্রি ক্লিয়ার করা হয়েছে!', 'success');
+    }
+  };
+
+  const handleToggleBanUser = async (userIdOrEmail: string) => {
+    const currentBanned = settings.bannedUsers || [];
+    const isAlreadyBanned = currentBanned.includes(userIdOrEmail);
+    const newBanned = isAlreadyBanned
+      ? currentBanned.filter(id => id !== userIdOrEmail)
+      : [...currentBanned, userIdOrEmail];
+
+    const updatedSettings: AdminSettings = {
+      ...settings,
+      bannedUsers: newBanned
+    };
+
+    setSettings(updatedSettings);
+
+    if (db) {
+      try {
+        await setDoc(doc(db, 'settings', 'admin_config'), cleanForFirestore(updatedSettings));
+      } catch (e) {
+        console.warn('Firestore settings update error:', e);
+      }
+    }
+
+    if (isAlreadyBanned) {
+      showToast(`ইউজার (${userIdOrEmail}) আনব্যান করা হয়েছে!`, 'success');
+    } else {
+      showToast(`ইউজার (${userIdOrEmail}) ব্যান করা হয়েছে!`, 'info');
     }
   };
 
@@ -602,6 +678,15 @@ export default function App() {
     }
   };
 
+  const isCurrentUserBanned = Boolean(
+    currentUser &&
+    settings.bannedUsers &&
+    (
+      (currentUser.id && settings.bannedUsers.includes(currentUser.id)) ||
+      (currentUser.email && settings.bannedUsers.includes(currentUser.email))
+    )
+  );
+
   if (view === 'admin') {
     return (
       <div className="min-h-screen flex flex-col relative overflow-hidden bg-[#070e0a] text-white">
@@ -625,6 +710,8 @@ export default function App() {
               onDeleteOrder={handleDeleteOrder}
               onDeleteCurrency={handleDeleteCurrency}
               onSendAdminChatMessage={handleAdminSendChatMessage}
+              onClearUserChat={handleClearUserChat}
+              onToggleBanUser={handleToggleBanUser}
               onCloseAdmin={handleCloseAdmin}
               onLogoutAdmin={handleAdminLogout}
               showToast={showToast}
@@ -793,6 +880,30 @@ export default function App() {
 
       {/* Main Container Viewport */}
       <main className="max-w-7xl mx-auto w-full px-4 sm:px-8 py-8 pb-32 md:pb-16 flex-1 relative z-10">
+        {/* Prominent Red Alert Banner if User is Banned */}
+        {isCurrentUserBanned && (
+          <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl border-2 border-rose-500/60 bg-gradient-to-br from-[#2e050c]/95 via-[#1a0306]/95 to-[#100103]/95 backdrop-blur-xl p-4 sm:p-5 shadow-2xl shadow-rose-950/80 mb-6">
+            <div className="flex items-center gap-3.5">
+              <div className="w-11 h-11 rounded-2xl bg-rose-500/20 border border-rose-500/40 flex items-center justify-center text-rose-400 shrink-0 shadow-inner">
+                <Ban className="w-6 h-6 text-rose-400" />
+              </div>
+              <div className="space-y-0.5">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h4 className="text-sm sm:text-base font-black text-rose-300">
+                    আপনার অ্যাকাউন্টটি ব্যান করা হয়েছে (Account Banned)
+                  </h4>
+                  <span className="px-2 py-0.5 rounded-full bg-rose-500 text-white text-[9px] font-black uppercase">
+                    সার্ভিস বন্ধ
+                  </span>
+                </div>
+                <p className="text-xs text-rose-200/90 font-medium">
+                  অ্যাডমিন কর্তৃক অ্যাকাউন্ট স্থগিত থাকায় আপনি কোনো নতুন ট্রেডিং বা অর্ডার করতে পারবেন না। বিস্তারিত জানতে লাইভ চ্যাটে যোগাযোগ করুন।
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         <AnimatePresence mode="wait">
           {view === 'home' && (
             <motion.div
@@ -916,6 +1027,7 @@ export default function App() {
                 initialSelectedCurrencyId={selectedCurrencyId}
                 initialOrderType={selectedOrderType}
                 adminSettings={settings}
+                isBanned={isCurrentUserBanned}
                 onOrderSubmit={handleOrderSubmit}
                 showToast={showToast}
               />
@@ -932,7 +1044,7 @@ export default function App() {
               className="max-w-4xl mx-auto"
             >
               <ProfileView 
-                user={currentUser} 
+                user={{ ...currentUser, isBanned: isCurrentUserBanned }} 
                 orders={orders} 
                 onSignOut={handleSignOut}
                 showToast={showToast}
@@ -954,7 +1066,7 @@ export default function App() {
               className="max-w-4xl mx-auto"
             >
               <ProfileView 
-                user={currentUser} 
+                user={{ ...currentUser, isBanned: isCurrentUserBanned }} 
                 orders={orders} 
                 onSignOut={handleSignOut}
                 showToast={showToast}
