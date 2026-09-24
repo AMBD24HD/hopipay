@@ -10,7 +10,6 @@ interface HeaderProps {
   view: 'home' | 'order' | 'order-list' | 'profile' | 'admin';
   setView: (view: 'home' | 'order' | 'order-list' | 'profile' | 'admin') => void;
   checkAuthAndShow: (targetView: 'order' | 'order-list' | 'profile') => void;
-  onOpenAdmin?: () => void;
 }
 
 export default function Header({ 
@@ -20,7 +19,7 @@ export default function Header({
   currentUser, 
   view, 
   setView, 
-  checkAuthAndShow 
+  checkAuthAndShow
 }: HeaderProps) {
   const [timeStr, setTimeStr] = useState<string>('সময়...');
   const [greeting, setGreeting] = useState<string>('শুভ দিন!');

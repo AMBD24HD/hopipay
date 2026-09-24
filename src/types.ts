@@ -63,6 +63,8 @@ export interface ChatMessage {
   sender: 'user' | 'admin';
   senderName: string;
   userEmail: string;
+  userId?: string;
+  targetUserId?: string; // The user ID this message belongs to when admin sends a message
   text: string;
   time: string;
   read?: boolean;

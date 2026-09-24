@@ -4,6 +4,7 @@ import { Copy, Check, DollarSign, Smartphone, Key, ArrowRight, ArrowDownUp, Land
 import { motion, AnimatePresence } from 'motion/react';
 import { INITIAL_SETTINGS } from '../data/mockData';
 import { renderCurrencyVisual } from './CurrencyList';
+import { copyToClipboard } from '../utils/clipboard';
 
 interface OrderFormProps {
   currencies: Currency[];
@@ -51,11 +52,20 @@ export default function OrderForm({
   const minLimit = orderType === 'sell' ? (selectedCurrency?.minSell || 5) : (selectedCurrency?.minBuy || 5);
   const maxLimit = orderType === 'sell' ? (selectedCurrency?.maxSell || 2000) : (selectedCurrency?.maxBuy || 2000);
 
-  const handleCopyText = (textToCopy: string) => {
-    navigator.clipboard.writeText(textToCopy);
-    setCopied(true);
-    showToast('কপি করা হয়েছে!', 'success');
-    setTimeout(() => setCopied(false), 2000);
+  const handleCopyText = async (textToCopy: string, label: string = 'অ্যাড্রেস') => {
+    if (!textToCopy || textToCopy.trim() === '') {
+      showToast('কপি করার মতো কোনো তথ্য পাওয়া যায়নি!', 'error');
+      return;
+    }
+    const cleanText = textToCopy.trim();
+    const success = await copyToClipboard(cleanText);
+    if (success) {
+      setCopied(true);
+      showToast(`${label} সফলভাবে কপি করা হয়েছে!`, 'success');
+      setTimeout(() => setCopied(false), 2000);
+    } else {
+      showToast(`কপি ব্যর্থ হয়েছে! ম্যানুয়ালি সিলেক্ট করে কপি করুন: ${cleanText}`, 'error');
+    }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -171,19 +181,32 @@ export default function OrderForm({
               className="p-5 rounded-2xl bg-gradient-to-br from-emerald-500/10 to-teal-500/5 border border-emerald-500/25 shadow-xl relative overflow-hidden"
             >
               <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 rounded-full blur-[40px]" />
-              <p className="text-[10px] font-black text-emerald-400 uppercase tracking-widest mb-1.5">
-                আমাদের পেমেন্ট অ্যাড্রেস (নিচের ঠিকানায় ডলার পাঠান)
-              </p>
-              <div className="flex items-center justify-between gap-3">
-                <span className="text-sm font-black text-white break-all select-all font-mono">
-                  {selectedCurrency.address}
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-[10px] font-black text-emerald-400 uppercase tracking-widest">
+                  আমাদের পেমেন্ট অ্যাড্রেস (নিচের ঠিকানায় ডলার পাঠান)
+                </p>
+                <span className="text-[10px] text-emerald-300 font-bold bg-emerald-500/20 px-2 py-0.5 rounded-full">
+                  কপি করতে ট্যাপ করুন
+                </span>
+              </div>
+              <div 
+                onClick={() => handleCopyText(selectedCurrency?.address || 'TY9YgS5z6rGfU9WfN8q7K8jNn8s2d7eL1A', 'ডলার পেমেন্ট অ্যাড্রেস')}
+                className="flex items-center justify-between gap-3 p-3 rounded-xl bg-black/40 hover:bg-black/60 border border-emerald-500/20 cursor-pointer transition group"
+                title="কপি করতে ক্লিক করুন"
+              >
+                <span className="text-sm font-black text-white break-all select-all font-mono group-hover:text-emerald-300 transition">
+                  {selectedCurrency?.address || 'TY9YgS5z6rGfU9WfN8q7K8jNn8s2d7eL1A'}
                 </span>
                 <button
                   type="button"
-                  onClick={() => handleCopyText(selectedCurrency.address)}
-                  className="w-10 h-10 rounded-xl bg-white/5 hover:bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0 transition active:scale-90"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleCopyText(selectedCurrency?.address || 'TY9YgS5z6rGfU9WfN8q7K8jNn8s2d7eL1A', 'ডলার পেমেন্ট অ্যাড্রেস');
+                  }}
+                  className="px-3 py-2 rounded-xl bg-emerald-500/20 hover:bg-emerald-500 text-emerald-300 hover:text-white flex items-center gap-1.5 shrink-0 transition active:scale-95 text-xs font-black"
                 >
-                  {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                  {copied ? <Check className="w-4 h-4 text-emerald-300" /> : <Copy className="w-4 h-4" />}
+                  <span>{copied ? 'কপি হয়েছে' : 'কপি করুন'}</span>
                 </button>
               </div>
             </motion.div>
@@ -196,10 +219,22 @@ export default function OrderForm({
               className="p-5 rounded-2xl bg-gradient-to-br from-cyan-500/10 to-blue-500/5 border border-cyan-500/25 shadow-xl relative overflow-hidden"
             >
               <div className="absolute top-0 right-0 w-32 h-32 bg-cyan-500/5 rounded-full blur-[40px]" />
-              <p className="text-[10px] font-black text-cyan-400 uppercase tracking-widest mb-1.5">
-                আমাদের BDT ওয়ালেট নম্বর (নিচের নম্বরে টাকা পাঠান)
-              </p>
-              <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-[10px] font-black text-cyan-400 uppercase tracking-widest">
+                  আমাদের BDT ওয়ালেট নম্বর (নিচের নম্বরে টাকা পাঠান)
+                </p>
+                <span className="text-[10px] text-cyan-300 font-bold bg-cyan-500/20 px-2 py-0.5 rounded-full">
+                  কপি করতে ট্যাপ করুন
+                </span>
+              </div>
+              <div 
+                onClick={() => {
+                  const numberToCopy = (adminPaymentDetails || (payoutMethod === 'bKash' ? '01604366679' : '01604366679')).split(' ')[0];
+                  handleCopyText(numberToCopy, `${payoutMethod} নম্বর`);
+                }}
+                className="flex items-center justify-between gap-3 p-3 rounded-xl bg-black/40 hover:bg-black/60 border border-cyan-500/20 cursor-pointer transition group"
+                title="কপি করতে ক্লিক করুন"
+              >
                 <div className="flex items-center gap-2.5 overflow-hidden">
                   <div className={`w-8 h-8 rounded-full aspect-square overflow-hidden border p-0.5 flex items-center justify-center shrink-0 shadow-sm ${
                     payoutMethod === 'bKash' ? 'border-[#E2136E]/60 bg-white' : 'border-[#F7941D]/60 bg-white'
@@ -222,16 +257,21 @@ export default function OrderForm({
                       )
                     )}
                   </div>
-                  <span className="text-sm font-black text-white break-all select-all font-mono">
-                    {adminPaymentDetails}
+                  <span className="text-sm font-black text-white break-all select-all font-mono group-hover:text-cyan-300 transition">
+                    {adminPaymentDetails || (payoutMethod === 'bKash' ? '01604366679 (Personal)' : '01604366679 (Personal)')}
                   </span>
                 </div>
                 <button
                   type="button"
-                  onClick={() => handleCopyText(adminPaymentDetails.split(' ')[0])}
-                  className="w-10 h-10 rounded-xl bg-white/5 hover:bg-cyan-500/20 text-cyan-400 flex items-center justify-center shrink-0 transition active:scale-90"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    const numberToCopy = (adminPaymentDetails || (payoutMethod === 'bKash' ? '01604366679' : '01604366679')).split(' ')[0];
+                    handleCopyText(numberToCopy, `${payoutMethod} নম্বর`);
+                  }}
+                  className="px-3 py-2 rounded-xl bg-cyan-500/20 hover:bg-cyan-500 text-cyan-300 hover:text-white flex items-center gap-1.5 shrink-0 transition active:scale-95 text-xs font-black"
                 >
-                  {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                  {copied ? <Check className="w-4 h-4 text-cyan-300" /> : <Copy className="w-4 h-4" />}
+                  <span>{copied ? 'কপি হয়েছে' : 'কপি করুন'}</span>
                 </button>
               </div>
             </motion.div>

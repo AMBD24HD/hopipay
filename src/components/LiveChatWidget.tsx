@@ -5,9 +5,9 @@ import { ChatMessage, AdminSettings } from '../types';
 
 interface LiveChatWidgetProps {
   messages: ChatMessage[];
-  onSendMessage: (text: string) => void;
+  onSendMessage: (text: string, userId?: string, userName?: string, userEmail?: string) => void;
   adminSettings: AdminSettings;
-  currentUser?: { name: string; email: string } | null;
+  currentUser?: { id?: string; name: string; email: string; avatar?: string } | null;
 }
 
 export default function LiveChatWidget({
@@ -21,6 +21,27 @@ export default function LiveChatWidget({
   const [unreadCount, setUnreadCount] = useState(0);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  // Generate persistent guest ID if user is not logged in
+  const [guestId] = useState<string>(() => {
+    let gid = localStorage.getItem('velopay_chat_guest_id');
+    if (!gid) {
+      gid = 'guest_' + Math.floor(Math.random() * 90000 + 10000);
+      localStorage.setItem('velopay_chat_guest_id', gid);
+    }
+    return gid;
+  });
+
+  const effectiveUserId = currentUser?.id || currentUser?.email || guestId;
+  const effectiveUserName = currentUser?.name || 'গেস্ট কাস্টমার';
+  const effectiveUserEmail = currentUser?.email || `${guestId}@guest.velopay.com`;
+
+  // Filter messages so this user ONLY sees their own chat with Admin
+  const myMessages = messages.filter((msg) => {
+    const isFromMe = msg.userId === effectiveUserId || (currentUser?.email && msg.userEmail === currentUser.email);
+    const isTargetedToMe = msg.targetUserId === effectiveUserId || (currentUser?.email && msg.userEmail === currentUser.email);
+    return isFromMe || isTargetedToMe;
+  });
+
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
@@ -29,13 +50,16 @@ export default function LiveChatWidget({
     if (isOpen) {
       scrollToBottom();
       setUnreadCount(0);
+    } else {
+      const unread = myMessages.filter(m => m.sender === 'admin' && !m.read).length;
+      setUnreadCount(unread);
     }
-  }, [isOpen, messages]);
+  }, [isOpen, myMessages]);
 
   const handleSend = (e: React.FormEvent) => {
     e.preventDefault();
     if (!inputText.trim()) return;
-    onSendMessage(inputText.trim());
+    onSendMessage(inputText.trim(), effectiveUserId, effectiveUserName, effectiveUserEmail);
     setInputText('');
   };
 
@@ -186,7 +210,7 @@ export default function LiveChatWidget({
                 </div>
 
                 {/* Dynamic Messages */}
-                {messages.map((msg) => {
+                {myMessages.map((msg) => {
                   const isUser = msg.sender === 'user';
                   return (
                     <div

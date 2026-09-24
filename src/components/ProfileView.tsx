@@ -21,7 +21,7 @@ interface ProfileViewProps {
   onSignOut: () => void;
   showToast: (text: string, type: 'success' | 'error' | 'info') => void;
   mode?: 'all' | 'profile' | 'orders';
-  onNavigate?: (view: 'home' | 'order' | 'order-list' | 'profile') => void;
+  onNavigate?: (view: 'home' | 'order' | 'order-list' | 'profile' | 'admin') => void;
   whatsapp?: string;
   onUpdateAvatar?: (avatarUrl: string) => void;
 }

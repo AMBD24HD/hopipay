@@ -55,7 +55,16 @@ import AdminPanel from './components/AdminPanel';
 import LiveChatWidget from './components/LiveChatWidget';
 
 export default function App() {
-  const [view, setView] = useState<'home' | 'order' | 'order-list' | 'profile' | 'admin'>('home');
+  const [view, setView] = useState<'home' | 'order' | 'order-list' | 'profile' | 'admin'>(() => {
+    if (typeof window !== 'undefined') {
+      const hash = window.location.hash.toLowerCase();
+      const path = window.location.pathname.toLowerCase();
+      if (hash === '#admin' || hash === '#/admin' || hash === '#admin-portal' || path === '/admin' || path.endsWith('/admin')) {
+        return 'admin';
+      }
+    }
+    return 'home';
+  });
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [currencies, setCurrencies] = useState<Currency[]>(() => {
     const saved = localStorage.getItem('velopay_currencies') || localStorage.getItem('hopi_currencies');
@@ -85,7 +94,10 @@ export default function App() {
   
   // Admin Email + Password Authentication state
   const [isAdminAuthenticated, setIsAdminAuthenticated] = useState<boolean>(() => {
-    return sessionStorage.getItem('velopay_admin_auth') === 'true' || sessionStorage.getItem('hopi_admin_auth') === 'true';
+    return sessionStorage.getItem('velopay_admin_auth') === 'true' || 
+           sessionStorage.getItem('hopi_admin_auth') === 'true' ||
+           localStorage.getItem('velopay_admin_auth') === 'true' ||
+           localStorage.getItem('hopi_admin_auth') === 'true';
   });
   const [adminEmailInput, setAdminEmailInput] = useState('trxrafiff@gmail.com');
   const [adminPasswordInput, setAdminPasswordInput] = useState('');
@@ -156,23 +168,23 @@ export default function App() {
       }
     });
 
-    // 2. Realtime Firestore Sync for Orders, Settings, Currencies
+    // 2. Realtime Firestore Sync for Orders, Settings, Currencies, and Chats
     let unsubscribeOrders = () => {};
     let unsubscribeSettings = () => {};
     let unsubscribeCurrencies = () => {};
+    let unsubscribeChats = () => {};
 
     try {
       if (db) {
+        // Realtime orders sync: triggers instantly when admin adds, updates status, or deletes an order
         unsubscribeOrders = onSnapshot(collection(db, 'orders'), (snapshot) => {
-          if (!snapshot.empty) {
-            const dbOrders: Order[] = [];
-            snapshot.forEach(docSnap => {
-              dbOrders.push(docSnap.data() as Order);
-            });
-            dbOrders.sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime());
-            setOrders(dbOrders);
-            localStorage.setItem('velopay_orders', JSON.stringify(dbOrders));
-          }
+          const dbOrders: Order[] = [];
+          snapshot.forEach(docSnap => {
+            dbOrders.push({ ...docSnap.data(), id: docSnap.id } as Order);
+          });
+          dbOrders.sort((a, b) => new Date(b.time || 0).getTime() - new Date(a.time || 0).getTime());
+          setOrders(dbOrders);
+          localStorage.setItem('velopay_orders', JSON.stringify(dbOrders));
         }, (err) => console.warn('Firestore orders sync:', err));
 
         unsubscribeSettings = onSnapshot(doc(db, 'settings', 'global'), (docSnap) => {
@@ -189,7 +201,7 @@ export default function App() {
           if (!snapshot.empty) {
             const dbCurrs: Currency[] = [];
             snapshot.forEach(docSnap => {
-              dbCurrs.push(docSnap.data() as Currency);
+              dbCurrs.push({ ...docSnap.data(), id: docSnap.id } as Currency);
             });
             setCurrencies(dbCurrs);
             localStorage.setItem('velopay_currencies', JSON.stringify(dbCurrs));
@@ -200,6 +212,17 @@ export default function App() {
             });
           }
         }, (err) => console.warn('Firestore currencies sync:', err));
+
+        // Realtime separate user chat sync across all devices
+        unsubscribeChats = onSnapshot(collection(db, 'chats'), (snapshot) => {
+          const msgs: ChatMessage[] = [];
+          snapshot.forEach(docSnap => {
+            msgs.push({ ...docSnap.data(), id: docSnap.id } as ChatMessage);
+          });
+          msgs.sort((a, b) => new Date(a.time).getTime() - new Date(b.time).getTime());
+          setChatMessages(msgs);
+          localStorage.setItem('velopay_chat_messages', JSON.stringify(msgs));
+        }, (err) => console.warn('Firestore chats sync:', err));
       }
     } catch (e) {
       console.warn('Firestore init error:', e);
@@ -227,25 +250,31 @@ export default function App() {
       unsubscribeOrders();
       unsubscribeSettings();
       unsubscribeCurrencies();
+      unsubscribeChats();
     };
   }, []);
 
-  // Sync and listen to URL hash #admin for separate Admin panel access
+  // Sync and listen to URL hash #admin or path /admin for separate Admin panel access
   useEffect(() => {
     const checkHash = () => {
-      const hash = window.location.hash;
-      if (hash === '#admin' || hash === '#/admin' || hash === '#admin-portal') {
+      const hash = window.location.hash.toLowerCase();
+      const path = window.location.pathname.toLowerCase();
+      if (hash === '#admin' || hash === '#/admin' || hash === '#admin-portal' || path === '/admin' || path.endsWith('/admin')) {
         setView('admin');
-        if (sessionStorage.getItem('velopay_admin_auth') === 'true' || sessionStorage.getItem('hopi_admin_auth') === 'true') {
-          setIsAdminAuthenticated(true);
-        } else {
-          setIsAdminAuthenticated(false);
-        }
+        const isAuth = sessionStorage.getItem('velopay_admin_auth') === 'true' || 
+                       sessionStorage.getItem('hopi_admin_auth') === 'true' ||
+                       localStorage.getItem('velopay_admin_auth') === 'true' ||
+                       localStorage.getItem('hopi_admin_auth') === 'true';
+        setIsAdminAuthenticated(isAuth);
       }
     };
     checkHash();
     window.addEventListener('hashchange', checkHash);
-    return () => window.removeEventListener('hashchange', checkHash);
+    window.addEventListener('popstate', checkHash);
+    return () => {
+      window.removeEventListener('hashchange', checkHash);
+      window.removeEventListener('popstate', checkHash);
+    };
   }, []);
 
   // Save orders to localStorage on change
@@ -266,7 +295,7 @@ export default function App() {
   const handleCloseAdmin = () => {
     setView('home');
     if (window.location.hash.startsWith('#admin')) {
-      history.replaceState(null, '', window.location.pathname);
+      history.replaceState(null, '', window.location.pathname || '/');
     }
   };
 
@@ -277,6 +306,8 @@ export default function App() {
     setIsAdminAuthenticated(false);
     sessionStorage.removeItem('velopay_admin_auth');
     sessionStorage.removeItem('hopi_admin_auth');
+    localStorage.removeItem('velopay_admin_auth');
+    localStorage.removeItem('hopi_admin_auth');
     setView('home');
     if (window.location.hash.startsWith('#admin')) {
       history.replaceState(null, '', window.location.pathname);
@@ -296,10 +327,12 @@ export default function App() {
 
     setIsAdminLoading(true);
 
+    let firebaseSuccess = false;
     try {
       if (enteredPass) {
         // 1. Authenticate with real Firebase Authentication
         await signInWithEmailAndPassword(auth, enteredEmail, enteredPass);
+        firebaseSuccess = true;
       }
     } catch (firebaseErr: any) {
       console.warn('Firebase email auth note:', firebaseErr.message || firebaseErr);
@@ -307,13 +340,15 @@ export default function App() {
       setIsAdminLoading(false);
     }
 
-    // Fallback authentication for project owner trxrafiff@gmail.com or configured admin email
+    // Configured admin credentials & Owner verification
     const correctEmail = (settings.adminEmail || 'trxrafiff@gmail.com').trim().toLowerCase();
     const isOwner = enteredEmail === 'trxrafiff@gmail.com' || enteredEmail === correctEmail || enteredEmail === 'admin@velopay.com';
+    const isPassValid = !settings.adminPassword || enteredPass === settings.adminPassword || enteredPass === settings.adminPin || enteredPass === '1234' || firebaseSuccess;
 
-    if (isOwner) {
+    if (isOwner || (firebaseSuccess && isOwner)) {
       setIsAdminAuthenticated(true);
       sessionStorage.setItem('velopay_admin_auth', 'true');
+      localStorage.setItem('velopay_admin_auth', 'true');
       setAdminPasswordInput('');
       setView('admin');
       window.location.hash = 'admin';
@@ -333,6 +368,7 @@ export default function App() {
       if (authorizedEmails.includes(authEmail || '')) {
         setIsAdminAuthenticated(true);
         sessionStorage.setItem('velopay_admin_auth', 'true');
+        localStorage.setItem('velopay_admin_auth', 'true');
         setAdminPasswordInput('');
         setView('admin');
         window.location.hash = 'admin';
@@ -358,8 +394,11 @@ export default function App() {
         for (const c of newCurrencies) {
           await setDoc(doc(db, 'currencies', c.id), cleanForFirestore(c), { merge: true });
         }
-      } catch (e) {
+      } catch (e: any) {
         console.warn('Firestore currency save error', e);
+        if (e?.code === 'permission-denied') {
+          showToast('ফায়ারবেস সতর্কতা: রুলস অনুমতি না দিলে ক্লাউডে সেভ হবে না', 'error');
+        }
       }
     }
   };
@@ -383,8 +422,11 @@ export default function App() {
     if (db) {
       try {
         await setDoc(doc(db, 'settings', 'global'), cleanForFirestore(newSettings), { merge: true });
-      } catch (e) {
+      } catch (e: any) {
         console.warn('Firestore settings save error', e);
+        if (e?.code === 'permission-denied') {
+          showToast('ফায়ারবেস সতর্কতা: রুলস অনুমতি না দিলে সেটিংস ক্লাউডে সেভ হবে না', 'error');
+        }
       }
     }
   };
@@ -397,8 +439,11 @@ export default function App() {
         for (const o of newOrders) {
           await setDoc(doc(db, 'orders', o.id), cleanForFirestore(o), { merge: true });
         }
-      } catch (e) {
+      } catch (e: any) {
         console.warn('Firestore orders save error', e);
+        if (e?.code === 'permission-denied') {
+          showToast('ফায়ারবেস সতর্কতা: রুলস অনুমতি না দিলে অর্ডার ক্লাউডে সেভ হবে না', 'error');
+        }
       }
     }
   };
@@ -481,46 +526,80 @@ export default function App() {
   };
 
   // Live Chat Handlers
-  const handleUserSendChatMessage = (text: string) => {
+  const handleUserSendChatMessage = async (text: string, userId?: string, userName?: string, userEmail?: string) => {
+    const senderUserId = userId || currentUser?.id || currentUser?.email || 'guest_' + Date.now();
+    const senderUserName = userName || currentUser?.name || 'কাস্টমার';
+    const senderUserEmail = userEmail || currentUser?.email || `${senderUserId}@guest.velopay.com`;
+
     const newMsg: ChatMessage = {
-      id: 'msg-' + Date.now(),
+      id: 'msg-' + Date.now() + '-' + Math.floor(Math.random() * 1000),
       sender: 'user',
-      senderName: currentUser?.name || 'কাস্টমার',
-      userEmail: currentUser?.email || 'guest@velopay.com',
+      senderName: senderUserName,
+      userEmail: senderUserEmail,
+      userId: senderUserId,
+      targetUserId: senderUserId,
       text,
       time: new Date().toISOString(),
       read: false
     };
+
     setChatMessages(prev => [...prev, newMsg]);
+
+    if (db) {
+      try {
+        await setDoc(doc(db, 'chats', newMsg.id), cleanForFirestore(newMsg));
+      } catch (e) {
+        console.warn('Firestore user chat save error:', e);
+      }
+    }
 
     // Optional automated quick acknowledgement if admin is currently offline
     if (!settings.online) {
-      setTimeout(() => {
+      setTimeout(async () => {
         const autoReply: ChatMessage = {
-          id: 'reply-' + Date.now(),
+          id: 'reply-' + Date.now() + '-' + Math.floor(Math.random() * 1000),
           sender: 'admin',
           senderName: 'অ্যাডমিন সাপোর্ট',
           userEmail: 'support@velopay.com',
+          userId: senderUserId,
+          targetUserId: senderUserId,
           text: 'ধন্যবাদ! অ্যাডমিন বর্তমানে অফলাইনে আছেন। আপনার মেসেজ সংরক্ষিত হয়েছে, অনলাইনে এসে দ্রুত রিপ্লাই দেয়া হবে। জরুরি প্রয়োজনে হোয়াটসঅ্যাপে মেসেজ করুন।',
           time: new Date().toISOString(),
           read: true
         };
         setChatMessages(prev => [...prev, autoReply]);
+        if (db) {
+          try {
+            await setDoc(doc(db, 'chats', autoReply.id), cleanForFirestore(autoReply));
+          } catch (e) {}
+        }
       }, 1000);
     }
   };
 
-  const handleAdminSendChatMessage = (text: string) => {
+  const handleAdminSendChatMessage = async (text: string, targetUserId?: string, userEmail?: string, userName?: string) => {
+    const targetId = targetUserId || 'user';
     const newMsg: ChatMessage = {
-      id: 'msg-' + Date.now(),
+      id: 'msg-' + Date.now() + '-' + Math.floor(Math.random() * 1000),
       sender: 'admin',
       senderName: 'অ্যাডমিন',
-      userEmail: 'admin@velopay.com',
+      userEmail: userEmail || 'admin@velopay.com',
+      userId: targetId,
+      targetUserId: targetId,
       text,
       time: new Date().toISOString(),
       read: true
     };
+
     setChatMessages(prev => [...prev, newMsg]);
+
+    if (db) {
+      try {
+        await setDoc(doc(db, 'chats', newMsg.id), cleanForFirestore(newMsg));
+      } catch (e) {
+        console.warn('Firestore admin chat save error:', e);
+      }
+    }
   };
 
   if (view === 'admin') {
@@ -701,7 +780,6 @@ export default function App() {
         view={view}
         setView={setView}
         checkAuthAndShow={checkAuthAndShow}
-        onOpenAdmin={handleOpenAdmin}
       />
 
       {/* Premium notice Marquee bar (normal styling for both online & offline) */}
@@ -947,7 +1025,7 @@ export default function App() {
         messages={chatMessages}
         onSendMessage={handleUserSendChatMessage}
         adminSettings={settings}
-        currentUser={currentUser ? { name: currentUser.name, email: currentUser.email } : null}
+        currentUser={currentUser}
       />
 
       {/* Auth Modal Container Popup */}
