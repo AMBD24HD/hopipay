@@ -80,6 +80,7 @@ export default function Header({
               <img 
                 src={siteLogo} 
                 alt="Velopay" 
+                referrerPolicy="no-referrer"
                 className="w-full h-full object-cover" 
               />
             ) : (

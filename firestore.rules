@@ -1,79 +1,37 @@
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Helper functions
-    function isSignedIn() {
-      return request.auth != null;
-    }
-
-    // Admin Verification:
-    // Matches admin email (trxrafiff@gmail.com or admin@velopay.com),
-    // or token custom claims (admin: true),
-    // or role in /users/{uid} document
-    function isAdmin() {
-      return isSignedIn() && (
-        request.auth.token.email in ['trxrafiff@gmail.com', 'admin@velopay.com'] ||
-        request.auth.token.admin == true ||
-        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin')
-      );
-    }
-
     // 1. Currencies (Dollar Buy/Sell exchange rates, deposit wallets, reserves)
-    // - Public: Read-only so all visitors see live dollar rates
-    // - Admin: Create, update rates/wallets, delete
     match /currencies/{currencyId} {
-      allow read: if true;
-      allow write: if isAdmin();
+      allow read, write: if true;
     }
 
-    // 2. Settings (Notice banner, online status, site logo, bKash/Nagad admin numbers)
-    // - Public: Read-only so visitors see site notices and payment instructions
-    // - Admin: Full read/write access
+    // 2. Settings (Notice banner, online status, site logo, site favicon, bKash & Nagad numbers & logos)
     match /settings/{settingId} {
-      allow read: if true;
-      allow write: if isAdmin();
+      allow read, write: if true;
     }
 
     // 3. Orders (Buy/Sell dollar transactions)
-    // - Anyone (guest or registered user) can create an exchange order
-    // - Users can read their own orders by auth UID or order email
-    // - Admin can view, update status (Success/Cancelled), and manage all orders
     match /orders/{orderId} {
-      allow create: if true;
-      allow read: if isAdmin() || (isSignedIn() && (
-        (resource.data.userId != null && resource.data.userId == request.auth.uid) ||
-        (resource.data.email != null && resource.data.email == request.auth.token.email)
-      ));
-      allow update, delete: if isAdmin();
+      allow read, write: if true;
     }
 
-    // 4. User Profiles (User data, avatar, exchange history)
-    // - User can view and update their own profile
-    // - Admin can view and manage all users
+    // 4. User Profiles
     match /users/{userId} {
-      allow read: if isSignedIn() && (request.auth.uid == userId || isAdmin());
-      allow create, update: if isSignedIn() && (request.auth.uid == userId || isAdmin());
-      allow delete: if isAdmin();
+      allow read, write: if true;
     }
 
     // 5. Live Support Chat Messages
-    // - Visitors and users can send messages to support
-    // - User can read their conversation
-    // - Admin can read and reply to all chats
     match /chats/{chatId} {
-      allow create: if true;
-      allow read: if isAdmin() || (isSignedIn() && (
-        (resource.data.userEmail != null && resource.data.userEmail == request.auth.token.email) ||
-        (resource.data.userId != null && resource.data.userId == request.auth.uid)
-      ));
-      allow update, delete: if isAdmin();
+      allow read, write: if true;
     }
 
-    // Fallback: Default deny unless admin
+    // Fallback: Default allow read and write
     match /{document=**} {
-      allow read, write: if isAdmin();
+      allow read, write: if true;
     }
   }
 }
+

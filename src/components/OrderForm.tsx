@@ -206,7 +206,7 @@ export default function OrderForm({
                   }`}>
                     {payoutMethod === 'bKash' ? (
                       adminSettings?.bkashLogo ? (
-                        <img src={adminSettings.bkashLogo} alt="bKash" className="w-full h-full rounded-full object-cover" />
+                        <img src={adminSettings.bkashLogo} alt="bKash" referrerPolicy="no-referrer" className="w-full h-full rounded-full object-cover" />
                       ) : (
                         <div className="w-full h-full rounded-full bg-gradient-to-tr from-[#E2136E] to-pink-500 text-white text-[8px] font-black flex items-center justify-center">
                           bKash
@@ -214,7 +214,7 @@ export default function OrderForm({
                       )
                     ) : (
                       adminSettings?.nagadLogo ? (
-                        <img src={adminSettings.nagadLogo} alt="Nagad" className="w-full h-full rounded-full object-cover" />
+                        <img src={adminSettings.nagadLogo} alt="Nagad" referrerPolicy="no-referrer" className="w-full h-full rounded-full object-cover" />
                       ) : (
                         <div className="w-full h-full rounded-full bg-gradient-to-tr from-[#F7941D] to-orange-500 text-white text-[8px] font-black flex items-center justify-center">
                           Nagad

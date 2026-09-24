@@ -1057,6 +1057,7 @@ export default function AdminPanel({
                         placeholder="https://.../logo.png"
                         value={settingsForm.siteLogo || ''}
                         onChange={(e) => setSettingsForm({ ...settingsForm, siteLogo: e.target.value })}
+                        onBlur={() => onUpdateSettings(settingsForm)}
                         className="flex-1 px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-white text-xs font-mono focus:border-emerald-500 focus:outline-none"
                       />
                       <label className="px-3.5 py-2 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 border border-emerald-500/30 text-xs font-bold cursor-pointer transition flex items-center gap-1.5 shrink-0">
@@ -1077,7 +1078,12 @@ export default function AdminPanel({
                   {settingsForm.siteLogo && (
                     <button
                       type="button"
-                      onClick={() => setSettingsForm({ ...settingsForm, siteLogo: '' })}
+                      onClick={() => {
+                        const updated = { ...settingsForm, siteLogo: '' };
+                        setSettingsForm(updated);
+                        onUpdateSettings(updated);
+                        showToast('লোগো মুছে ডিফল্ট আইকন সেট করা হয়েছে!', 'info');
+                      }}
                       className="text-[10px] text-rose-400 hover:underline flex items-center gap-1 cursor-pointer"
                     >
                       <Trash2 className="w-3 h-3" /> লোগো মুছে ডিফল্ট আইকন রাখুন
@@ -1102,6 +1108,7 @@ export default function AdminPanel({
                         <img 
                           src={settingsForm.siteFavicon} 
                           alt="Favicon Preview" 
+                          referrerPolicy="no-referrer"
                           className="w-full h-full object-contain" 
                         />
                       ) : (
@@ -1118,6 +1125,7 @@ export default function AdminPanel({
                         placeholder="https://.../favicon.png"
                         value={settingsForm.siteFavicon || ''}
                         onChange={(e) => setSettingsForm({ ...settingsForm, siteFavicon: e.target.value })}
+                        onBlur={() => onUpdateSettings(settingsForm)}
                         className="flex-1 px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-white text-xs font-mono focus:border-cyan-500 focus:outline-none"
                       />
                       <label className="px-3.5 py-2 rounded-xl bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/30 text-xs font-bold cursor-pointer transition flex items-center gap-1.5 shrink-0">
@@ -1138,7 +1146,12 @@ export default function AdminPanel({
                   {settingsForm.siteFavicon && (
                     <button
                       type="button"
-                      onClick={() => setSettingsForm({ ...settingsForm, siteFavicon: '' })}
+                      onClick={() => {
+                        const updated = { ...settingsForm, siteFavicon: '' };
+                        setSettingsForm(updated);
+                        onUpdateSettings(updated);
+                        showToast('ফেভিকন মুছে ডিফল্ট রাখা হয়েছে!', 'info');
+                      }}
                       className="text-[10px] text-rose-400 hover:underline flex items-center gap-1 cursor-pointer"
                     >
                       <Trash2 className="w-3 h-3" /> ফেভিকন মুছে ডিফল্ট রাখুন
@@ -1160,7 +1173,7 @@ export default function AdminPanel({
                     <span className="text-xs font-black text-pink-400">বিকাশ (bKash) সেটিংস</span>
                     <div className="w-9 h-9 rounded-full aspect-square overflow-hidden border-2 border-pink-500/40 bg-white p-0.5 shadow-sm flex items-center justify-center shrink-0">
                       {settingsForm.bkashLogo ? (
-                        <img src={settingsForm.bkashLogo} alt="bKash" className="w-full h-full rounded-full object-cover" />
+                        <img src={settingsForm.bkashLogo} alt="bKash" referrerPolicy="no-referrer" className="w-full h-full rounded-full object-cover" />
                       ) : (
                         <div className="w-full h-full rounded-full bg-gradient-to-tr from-[#E2136E] to-pink-500 text-white text-[9px] font-black flex items-center justify-center">
                           bKash
@@ -1175,6 +1188,7 @@ export default function AdminPanel({
                       type="text"
                       value={settingsForm.adminBkashNumber}
                       onChange={(e) => setSettingsForm({ ...settingsForm, adminBkashNumber: e.target.value })}
+                      onBlur={() => onUpdateSettings(settingsForm)}
                       className="w-full px-3.5 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white text-xs font-bold"
                     />
                   </div>
@@ -1187,6 +1201,7 @@ export default function AdminPanel({
                         placeholder="https://.../bkash.png"
                         value={settingsForm.bkashLogo || ''}
                         onChange={(e) => setSettingsForm({ ...settingsForm, bkashLogo: e.target.value })}
+                        onBlur={() => onUpdateSettings(settingsForm)}
                         className="flex-1 px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-white text-xs font-mono"
                       />
                       <label className="px-3 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-white text-xs font-bold cursor-pointer transition flex items-center gap-1">
@@ -1203,6 +1218,20 @@ export default function AdminPanel({
                       </label>
                     </div>
                   </div>
+                  {settingsForm.bkashLogo && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const updated = { ...settingsForm, bkashLogo: '' };
+                        setSettingsForm(updated);
+                        onUpdateSettings(updated);
+                        showToast('বিকাশ লোগো মুছে ডিফল্ট রাখা হয়েছে!', 'info');
+                      }}
+                      className="text-[10px] text-rose-400 hover:underline flex items-center gap-1 cursor-pointer"
+                    >
+                      <Trash2 className="w-3 h-3" /> বিকাশ লোগো মুছে ডিফল্ট রাখুন
+                    </button>
+                  )}
                 </div>
 
                 {/* Nagad Config */}
@@ -1211,7 +1240,7 @@ export default function AdminPanel({
                     <span className="text-xs font-black text-orange-400">নগদ (Nagad) সেটিংস</span>
                     <div className="w-9 h-9 rounded-full aspect-square overflow-hidden border-2 border-orange-500/40 bg-white p-0.5 shadow-sm flex items-center justify-center shrink-0">
                       {settingsForm.nagadLogo ? (
-                        <img src={settingsForm.nagadLogo} alt="Nagad" className="w-full h-full rounded-full object-cover" />
+                        <img src={settingsForm.nagadLogo} alt="Nagad" referrerPolicy="no-referrer" className="w-full h-full rounded-full object-cover" />
                       ) : (
                         <div className="w-full h-full rounded-full bg-gradient-to-tr from-[#F7941D] to-orange-500 text-white text-[9px] font-black flex items-center justify-center">
                           Nagad
@@ -1226,6 +1255,7 @@ export default function AdminPanel({
                       type="text"
                       value={settingsForm.adminNagadNumber}
                       onChange={(e) => setSettingsForm({ ...settingsForm, adminNagadNumber: e.target.value })}
+                      onBlur={() => onUpdateSettings(settingsForm)}
                       className="w-full px-3.5 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white text-xs font-bold"
                     />
                   </div>
@@ -1238,6 +1268,7 @@ export default function AdminPanel({
                         placeholder="https://.../nagad.png"
                         value={settingsForm.nagadLogo || ''}
                         onChange={(e) => setSettingsForm({ ...settingsForm, nagadLogo: e.target.value })}
+                        onBlur={() => onUpdateSettings(settingsForm)}
                         className="flex-1 px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-white text-xs font-mono"
                       />
                       <label className="px-3 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-white text-xs font-bold cursor-pointer transition flex items-center gap-1">
@@ -1254,6 +1285,20 @@ export default function AdminPanel({
                       </label>
                     </div>
                   </div>
+                  {settingsForm.nagadLogo && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const updated = { ...settingsForm, nagadLogo: '' };
+                        setSettingsForm(updated);
+                        onUpdateSettings(updated);
+                        showToast('নগদ লোগো মুছে ডিফল্ট রাখা হয়েছে!', 'info');
+                      }}
+                      className="text-[10px] text-rose-400 hover:underline flex items-center gap-1 cursor-pointer"
+                    >
+                      <Trash2 className="w-3 h-3" /> নগদ লোগো মুছে ডিফল্ট রাখুন
+                    </button>
+                  )}
                 </div>
               </div>
             </div>

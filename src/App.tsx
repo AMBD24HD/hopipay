@@ -120,14 +120,18 @@ export default function App() {
 
   // Dynamically update site favicon if configured in admin settings
   useEffect(() => {
+    let link: HTMLLinkElement | null = document.querySelector("link[rel*='icon']");
+    if (!link) {
+      link = document.createElement('link');
+      link.rel = 'icon';
+      document.head.appendChild(link);
+    }
     if (settings.siteFavicon) {
-      let link: HTMLLinkElement | null = document.querySelector("link[rel*='icon']");
-      if (!link) {
-        link = document.createElement('link');
-        link.rel = 'icon';
-        document.head.appendChild(link);
-      }
+      link.removeAttribute('type');
       link.href = settings.siteFavicon;
+    } else {
+      link.setAttribute('type', 'image/svg+xml');
+      link.href = "data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚡</text></svg>";
     }
   }, [settings.siteFavicon]);
 
