@@ -157,6 +157,8 @@ export const INITIAL_SETTINGS: AdminSettings = {
   siteFavicon: '',
   totalExchangedUSD: 48920,
   activeUsersCount: 1420,
-  adminPin: '1234'
+  adminPin: '1234',
+  adminEmail: 'trxrafiff@gmail.com',
+  adminPassword: ''
 };
 

@@ -54,6 +54,8 @@ export interface AdminSettings {
   totalExchangedUSD: number;
   activeUsersCount: number;
   adminPin?: string;        // Security PIN for admin panel (e.g. 1234)
+  adminEmail?: string;      // Admin Login Email (e.g. admin@velopay.com)
+  adminPassword?: string;   // Admin Login Password (e.g. admin1234)
 }
 
 export interface ChatMessage {

@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Fingerprint, Lock, Mail, User, X } from 'lucide-react';
+import { Fingerprint, Lock, Mail, User, X, CheckCircle2, Loader2 } from 'lucide-react';
 import { User as UserType } from '../types';
+import { auth, googleProvider, signInWithPopup, signInWithEmailAndPassword, createUserWithEmailAndPassword, db } from '../firebase';
+import { doc, setDoc } from 'firebase/firestore';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -15,46 +17,128 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, showToast }:
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!email || !password) {
-      showToast('সবগুলো ঘর পূরণ করুন!', 'error');
+    if (!email.trim() || !password.trim()) {
+      showToast('ইমেইল এবং পাসওয়ার্ড দুটিই দিন!', 'error');
       return;
     }
 
-    if (isSignUp && !name) {
+    if (isSignUp && !name.trim()) {
       showToast('আপনার নামটি লিখুন!', 'error');
       return;
     }
 
-    // Process simulation
-    const userData: UserType = {
-      name: isSignUp ? name : email.split('@')[0].toUpperCase(),
-      email: email,
-      createdAt: new Date().toISOString(),
-    };
+    setLoading(true);
 
-    // Store in localStorage
-    localStorage.setItem('velopay_user', JSON.stringify(userData));
-    localStorage.setItem('hopi_user', JSON.stringify(userData));
-    onAuthSuccess(userData);
-    showToast(isSignUp ? 'অ্যাকাউন্ট তৈরি সফল হয়েছে!' : 'লগইন সফল হয়েছে!', 'success');
-    onClose();
+    try {
+      if (isSignUp) {
+        // Firebase User Registration
+        const userCredential = await createUserWithEmailAndPassword(auth, email.trim(), password.trim());
+        const firebaseUser = userCredential.user;
+
+        const userData: UserType = {
+          id: firebaseUser.uid,
+          name: name.trim(),
+          email: firebaseUser.email || email.trim(),
+          avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(name.trim())}&background=10b981&color=fff&bold=true`,
+          createdAt: new Date().toISOString(),
+        };
+
+        // Save user to Firestore if available
+        try {
+          if (db) {
+            await setDoc(doc(db, 'users', firebaseUser.uid), userData, { merge: true });
+          }
+        } catch (dbErr) {
+          console.warn('Firestore user save warning:', dbErr);
+        }
+
+        localStorage.setItem('velopay_user', JSON.stringify(userData));
+        onAuthSuccess(userData);
+        showToast('Firebase-এ সফলভাবে অ্যাকাউন্ট তৈরি হয়েছে!', 'success');
+        onClose();
+      } else {
+        // Firebase User Login
+        const userCredential = await signInWithEmailAndPassword(auth, email.trim(), password.trim());
+        const firebaseUser = userCredential.user;
+
+        const userData: UserType = {
+          id: firebaseUser.uid,
+          name: firebaseUser.displayName || email.split('@')[0].toUpperCase(),
+          email: firebaseUser.email || email.trim(),
+          avatar: firebaseUser.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(email.split('@')[0])}&background=10b981&color=fff&bold=true`,
+          createdAt: new Date().toISOString(),
+        };
+
+        localStorage.setItem('velopay_user', JSON.stringify(userData));
+        onAuthSuccess(userData);
+        showToast('Firebase-এ সফলভাবে লগইন হয়েছে!', 'success');
+        onClose();
+      }
+    } catch (err: any) {
+      console.error('Firebase Auth error:', err);
+      let errorMsg = 'লগইন ব্যর্থ হয়েছে!';
+      if (err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
+        errorMsg = 'ভুল পাসওয়ার্ড অথবা ইমেইল! সঠিক তথ্য দিন।';
+      } else if (err.code === 'auth/user-not-found') {
+        errorMsg = 'এই ইমেইলে কোনো অ্যাকাউন্ট পাওয়া যায়নি! "নতুন খুলুন"-এ ক্লিক করুন।';
+      } else if (err.code === 'auth/email-already-in-use') {
+        errorMsg = 'এই ইমেইলটি ইতিমধ্যে ব্যবহৃত হয়েছে! অনুগ্রহ করে লগইন করুন।';
+      } else if (err.code === 'auth/weak-password') {
+        errorMsg = 'পাসওয়ার্ড অন্তত ৬ অক্ষরের হতে হবে!';
+      } else if (err.code === 'auth/invalid-email') {
+        errorMsg = 'সঠিক ইমেইল অ্যাড্রেস লিখুন!';
+      } else if (err.message) {
+        errorMsg = err.message;
+      }
+      showToast(errorMsg, 'error');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleDemoLogin = () => {
-    const demoUser: UserType = {
-      name: 'RAFIFF RAZIN',
-      email: 'trxrafiff@gmail.com',
-      createdAt: new Date().toISOString(),
-    };
-    localStorage.setItem('velopay_user', JSON.stringify(demoUser));
-    localStorage.setItem('hopi_user', JSON.stringify(demoUser));
-    onAuthSuccess(demoUser);
-    showToast('ডেমো অ্যাকাউন্ট দিয়ে লগইন করা হয়েছে!', 'success');
-    onClose();
+  const handleGoogleSignIn = async () => {
+    setLoading(true);
+    try {
+      const result = await signInWithPopup(auth, googleProvider);
+      const user = result.user;
+      const displayName = user.displayName || user.email?.split('@')[0] || 'User';
+
+      const userData: UserType = {
+        id: user.uid,
+        name: displayName,
+        email: user.email || '',
+        avatar: user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=4285F4&color=fff&bold=true`,
+        createdAt: new Date().toISOString(),
+      };
+
+      // Save user to Firestore
+      try {
+        if (db && user.uid) {
+          await setDoc(doc(db, 'users', user.uid), userData, { merge: true });
+        }
+      } catch (dbErr) {
+        console.warn('Firestore user save warning:', dbErr);
+      }
+
+      localStorage.setItem('velopay_user', JSON.stringify(userData));
+      onAuthSuccess(userData);
+      showToast(`Google (${user.email}) দিয়ে সফলভাবে লগইন হয়েছে!`, 'success');
+      onClose();
+    } catch (err: any) {
+      console.error('Google Sign In Error:', err);
+      if (err.code === 'auth/popup-closed-by-user') {
+        showToast('Google লগইন উইন্ডো বন্ধ করা হয়েছে।', 'error');
+      } else {
+        showToast('Google সাইন ইন করতে সমস্যা হয়েছে। ইমেইল ও পাসওয়ার্ড ব্যবহার করুন।', 'error');
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -80,30 +164,33 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, showToast }:
             {/* Close button */}
             <button
               onClick={onClose}
-              className="absolute top-6 right-6 w-9 h-9 rounded-full bg-white/5 hover:bg-emerald-500/20 text-white/60 hover:text-emerald-400 flex items-center justify-center transition active:scale-90"
+              disabled={loading}
+              className="absolute top-6 right-6 w-9 h-9 rounded-full bg-white/5 hover:bg-emerald-500/20 text-white/60 hover:text-emerald-400 flex items-center justify-center transition active:scale-90 cursor-pointer"
             >
               <X className="w-5 h-5" />
             </button>
 
+            {/* Auth Form (Email / Password + Google) */}
             <form onSubmit={handleSubmit} className="text-center">
-              {/* iOS TouchID / Fingerprint Icon */}
-              <div className="w-16 h-16 mx-auto mb-5 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
+              {/* TouchID / Shield Icon */}
+              <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
                 <Fingerprint className="w-9 h-9 animate-pulse" />
               </div>
 
               <h2 className="text-2xl font-black text-white tracking-tight">
-                {isSignUp ? 'নতুন অ্যাকাউন্ট খুলুন' : 'স্বাগতম ব্যাক!'}
+                {isSignUp ? 'নতুন অ্যাকাউন্ট খুলুন' : 'লগইন করুন'}
               </h2>
               <p className="text-xs text-white/50 mt-1 mb-6 font-medium">
-                {isSignUp ? 'আপনার তথ্যগুলো দিয়ে রেজিস্ট্রেশন সম্পন্ন করুন' : 'আপনার অ্যাকাউন্টে লগইন করুন'}
+                {isSignUp ? 'Firebase Authentication-এ নতুন ইউজার তৈরি হবে' : 'আপনার ইমেইল ও পাসওয়ার্ড দিয়ে প্রবেশ করুন'}
               </p>
 
-              <div className="space-y-4 text-left">
+              <div className="space-y-3.5 text-left">
                 {isSignUp && (
                   <div className="relative">
                     <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-emerald-400/60" />
                     <input
                       type="text"
+                      required
                       placeholder="আপনার নাম লিখুন"
                       value={name}
                       onChange={(e) => setName(e.target.value)}
@@ -116,7 +203,8 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, showToast }:
                   <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-emerald-400/60" />
                   <input
                     type="email"
-                    placeholder="ইমেইল অ্যাড্রেস (Gmail)"
+                    required
+                    placeholder="আপনার ইমেইল অ্যাড্রেস"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     className="w-full pl-12 pr-4 py-3.5 rounded-2xl ios-glass-input text-sm font-medium"
@@ -127,6 +215,7 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, showToast }:
                   <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-emerald-400/60" />
                   <input
                     type="password"
+                    required
                     placeholder="পাসওয়ার্ড লিখুন"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
@@ -136,32 +225,58 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, showToast }:
 
                 <button
                   type="submit"
-                  className="w-full mt-2 py-4 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white font-bold shadow-lg shadow-emerald-500/10 active:scale-95 transition cursor-pointer"
+                  disabled={loading}
+                  className="w-full mt-2 py-4 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white font-bold shadow-lg shadow-emerald-500/10 active:scale-95 transition cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50"
                 >
-                  {isSignUp ? 'অ্যাকাউন্ট তৈরি করুন' : 'প্রবেশ করুন'}
+                  {loading ? (
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                  ) : (
+                    <span>{isSignUp ? 'অ্যাকাউন্ট তৈরি করুন' : 'প্রবেশ করুন'}</span>
+                  )}
                 </button>
               </div>
             </form>
 
             <div className="relative flex py-4 items-center">
-              <div className="flex-grow border-t border-white/5"></div>
+              <div className="flex-grow border-t border-white/10"></div>
               <span className="flex-shrink mx-4 text-[10px] text-white/30 uppercase font-black tracking-widest">অথবা</span>
-              <div className="flex-grow border-t border-white/5"></div>
+              <div className="flex-grow border-t border-white/10"></div>
             </div>
 
             <div className="space-y-3">
+              {/* Google Sign-In Button */}
               <button
-                onClick={handleDemoLogin}
-                className="w-full py-3.5 rounded-2xl bg-white/5 hover:bg-emerald-500/10 border border-white/10 text-emerald-400 font-bold text-sm transition active:scale-95 cursor-pointer"
+                type="button"
+                onClick={handleGoogleSignIn}
+                disabled={loading}
+                className="w-full py-3.5 px-4 rounded-2xl bg-white hover:bg-neutral-100 text-neutral-800 font-bold text-sm transition active:scale-95 cursor-pointer flex items-center justify-center gap-3 shadow-lg shadow-black/25 border border-white/20 disabled:opacity-50"
               >
-                ডেমো অ্যাকাউন্ট দিয়ে সরাসরি লগইন
+                <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24">
+                  <path
+                    fill="#4285F4"
+                    d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                  />
+                  <path
+                    fill="#34A853"
+                    d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                  />
+                  <path
+                    fill="#FBBC05"
+                    d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
+                  />
+                  <path
+                    fill="#EA4335"
+                    d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
+                  />
+                </svg>
+                <span>Google দিয়ে সরাসরি সাইন ইন করুন</span>
               </button>
 
               <p className="text-center text-xs text-white/45 font-medium pt-2">
                 {isSignUp ? 'ইতিমধ্যে অ্যাকাউন্ট আছে?' : 'অ্যাকাউন্ট তৈরি করা নেই?'}
                 <button
                   onClick={() => setIsSignUp(!isSignUp)}
-                  className="text-emerald-400 font-bold ml-2 hover:underline focus:outline-none"
+                  className="text-emerald-400 font-bold ml-2 hover:underline focus:outline-none cursor-pointer"
                 >
                   {isSignUp ? 'লগইন করুন' : 'নতুন খুলুন'}
                 </button>

@@ -1265,16 +1265,53 @@ export default function AdminPanel({
                   className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white text-sm font-mono focus:border-emerald-500 focus:outline-none"
                 />
               </div>
+            </div>
 
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-white/80">অ্যাডমিন সিকিউরিটি পিন (PIN)</label>
-                <input
-                  type="text"
-                  placeholder="1234"
-                  value={settingsForm.adminPin || '1234'}
-                  onChange={(e) => setSettingsForm({ ...settingsForm, adminPin: e.target.value })}
-                  className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white text-sm font-mono focus:border-emerald-500 focus:outline-none"
-                />
+            {/* Admin Portal Credentials (Email + Password + PIN) */}
+            <div className="p-5 rounded-2xl bg-black/40 border border-white/10 space-y-4">
+              <div>
+                <h4 className="text-sm font-black text-emerald-400 uppercase tracking-wider flex items-center gap-2">
+                  <Shield className="w-4 h-4" /> অ্যাডমিন পোর্টাল লগইন তথ্য (Admin Credentials)
+                </h4>
+                <p className="text-xs text-white/50 mt-1">
+                  অ্যাডমিন প্যানেলে প্রবেশের ইমেইল এবং পাসওয়ার্ড পরিবর্তন করুন।
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-white/80">অ্যাডমিন ইমেইল</label>
+                  <input
+                    type="email"
+                    required
+                    placeholder="trxrafiff@gmail.com"
+                    value={settingsForm.adminEmail || 'trxrafiff@gmail.com'}
+                    onChange={(e) => setSettingsForm({ ...settingsForm, adminEmail: e.target.value })}
+                    className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white text-sm font-medium focus:border-emerald-500 focus:outline-none"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-white/80">অ্যাডমিন পাসওয়ার্ড (Firebase / Local)</label>
+                  <input
+                    type="text"
+                    placeholder="আপনার গোপন পাসওয়ার্ড লিখুন"
+                    value={settingsForm.adminPassword || ''}
+                    onChange={(e) => setSettingsForm({ ...settingsForm, adminPassword: e.target.value })}
+                    className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-emerald-400 text-sm font-mono font-bold focus:border-emerald-500 focus:outline-none"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-white/80">অ্যাডমিন ব্যাকআপ পিন</label>
+                  <input
+                    type="text"
+                    placeholder="1234"
+                    value={settingsForm.adminPin || '1234'}
+                    onChange={(e) => setSettingsForm({ ...settingsForm, adminPin: e.target.value })}
+                    className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white text-sm font-mono focus:border-emerald-500 focus:outline-none"
+                  />
+                </div>
               </div>
             </div>
 

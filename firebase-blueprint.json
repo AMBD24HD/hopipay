@@ -1,0 +1,122 @@
+{
+  "entities": {
+    "Currency": {
+      "title": "Currency",
+      "description": "Exchange currency or token with buy/sell rates and deposit wallet addresses",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "sellRate": { "type": "number" },
+        "buyRate": { "type": "number" },
+        "address": { "type": "string" },
+        "type": { "type": "string" },
+        "symbol": { "type": "string" },
+        "placeholder": { "type": "string" },
+        "imageUrl": { "type": "string" },
+        "minBuy": { "type": "number" },
+        "maxBuy": { "type": "number" },
+        "minSell": { "type": "number" },
+        "maxSell": { "type": "number" },
+        "reserve": { "type": "number" }
+      },
+      "required": ["id", "name", "sellRate", "buyRate", "address", "type", "symbol"]
+    },
+    "Setting": {
+      "title": "Setting",
+      "description": "Global application configuration for notice, live status, site stats, branding and admin portal",
+      "type": "object",
+      "properties": {
+        "online": { "type": "boolean" },
+        "notice": { "type": "string" },
+        "whatsapp": { "type": "string" },
+        "adminBkashNumber": { "type": "string" },
+        "adminNagadNumber": { "type": "string" },
+        "bkashLogo": { "type": "string" },
+        "nagadLogo": { "type": "string" },
+        "siteLogo": { "type": "string" },
+        "siteFavicon": { "type": "string" },
+        "totalExchangedUSD": { "type": "number" },
+        "activeUsersCount": { "type": "number" },
+        "adminEmail": { "type": "string" },
+        "adminPassword": { "type": "string" },
+        "adminPin": { "type": "string" }
+      },
+      "required": ["online", "notice", "whatsapp", "adminBkashNumber", "adminNagadNumber"]
+    },
+    "Order": {
+      "title": "Order",
+      "description": "User currency exchange buy/sell order record",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "user": { "type": "string" },
+        "email": { "type": "string" },
+        "userId": { "type": "string" },
+        "orderType": { "type": "string", "enum": ["buy", "sell"] },
+        "amountUSD": { "type": "number" },
+        "amountBDT": { "type": "number" },
+        "rate": { "type": "number" },
+        "method": { "type": "string" },
+        "payoutMethod": { "type": "string" },
+        "phone": { "type": "string" },
+        "txid": { "type": "string" },
+        "userReceiveAddress": { "type": "string" },
+        "status": { "type": "string", "enum": ["Pending", "Success", "Cancelled"] },
+        "time": { "type": "string" }
+      },
+      "required": ["id", "user", "email", "orderType", "amountUSD", "amountBDT", "rate", "method", "payoutMethod", "phone", "status", "time"]
+    },
+    "User": {
+      "title": "User",
+      "description": "Registered user profile information and access role",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "email": { "type": "string" },
+        "avatar": { "type": "string" },
+        "role": { "type": "string", "enum": ["admin", "user"] },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["name", "email", "createdAt"]
+    },
+    "ChatMessage": {
+      "title": "ChatMessage",
+      "description": "Live support chat conversation message",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "sender": { "type": "string", "enum": ["user", "admin"] },
+        "senderName": { "type": "string" },
+        "userEmail": { "type": "string" },
+        "text": { "type": "string" },
+        "time": { "type": "string" },
+        "read": { "type": "boolean" }
+      },
+      "required": ["id", "sender", "senderName", "userEmail", "text", "time"]
+    }
+  },
+  "firestore": {
+    "/currencies/{currencyId}": {
+      "schema": "Currency",
+      "description": "List of available exchange currencies with live rates"
+    },
+    "/settings/{settingId}": {
+      "schema": "Setting",
+      "description": "Global website settings and live controls"
+    },
+    "/orders/{orderId}": {
+      "schema": "Order",
+      "description": "Exchange transaction order documents"
+    },
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profiles and permissions"
+    },
+    "/chats/{chatId}": {
+      "schema": "ChatMessage",
+      "description": "Real-time user support chat messages"
+    }
+  }
+}
