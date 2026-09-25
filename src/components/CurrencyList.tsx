@@ -12,7 +12,9 @@ import {
   Wallet, 
   ArrowUpRight,
   DollarSign,
-  ShieldCheck
+  ShieldCheck,
+  ChevronDown,
+  Check
 } from 'lucide-react';
 import { motion } from 'motion/react';
 
@@ -62,6 +64,7 @@ export const renderCurrencyVisual = (currency: Currency, sizeClass = "w-6 h-6") 
 export default function CurrencyList({ currencies, onStartExchange }: CurrencyListProps) {
   const [selectedCalcCurrency, setSelectedCalcCurrency] = useState<string>(currencies[0]?.id || '');
   const [calcType, setCalcType] = useState<'buy' | 'sell'>('sell');
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
   const activeCurrency = currencies.find(c => c.id === selectedCalcCurrency) || currencies[0];
   const activeRate = activeCurrency ? (calcType === 'sell' ? activeCurrency.sellRate : activeCurrency.buyRate) : 0;
@@ -115,22 +118,56 @@ export default function CurrencyList({ currencies, onStartExchange }: CurrencyLi
           <div className="lg:col-span-7 bg-white/5 border border-white/10 p-6 rounded-2xl space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-11 gap-4 items-center">
               {/* Currency Selection Dropdown & 1 USD display (No manual typing) */}
-              <div className="sm:col-span-5 space-y-1.5">
+              <div className="sm:col-span-5 space-y-1.5 relative">
                 <label className="text-[10px] font-black text-emerald-400 uppercase tracking-widest block ml-1">
                   কারেন্সি নির্বাচন করুন
                 </label>
                 <div className="flex flex-col gap-2">
-                  <select
-                    value={selectedCalcCurrency}
-                    onChange={(e) => setSelectedCalcCurrency(e.target.value)}
-                    className="w-full px-3.5 py-3 rounded-xl bg-black/50 border border-white/15 text-white text-xs sm:text-sm font-bold focus:outline-none focus:border-emerald-500 transition cursor-pointer"
-                  >
-                    {currencies.map(c => (
-                      <option key={c.id} value={c.id} className="bg-[#070e17] text-white py-1">
-                        {c.name}
-                      </option>
-                    ))}
-                  </select>
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                      className="w-full px-3.5 py-3 rounded-xl bg-black/50 border border-white/15 text-white text-xs sm:text-sm font-bold flex items-center justify-between gap-2 focus:outline-none focus:border-emerald-500 transition cursor-pointer"
+                    >
+                      <div className="flex items-center gap-2.5 overflow-hidden">
+                        <div className="w-7 h-7 rounded-lg bg-white/10 border border-white/10 flex items-center justify-center shrink-0 overflow-hidden p-0.5">
+                          {renderCurrencyVisual(activeCurrency, "w-4 h-4")}
+                        </div>
+                        <span className="truncate">{activeCurrency?.name}</span>
+                      </div>
+                      <ChevronDown className={`w-4 h-4 text-white/60 transition-transform shrink-0 ${isDropdownOpen ? 'rotate-180' : ''}`} />
+                    </button>
+
+                    {/* Dropdown Menu */}
+                    {isDropdownOpen && (
+                      <div className="absolute top-full left-0 right-0 mt-1.5 z-50 ios-glass rounded-xl border border-white/15 bg-[#070e17]/95 shadow-2xl overflow-hidden max-h-56 overflow-y-auto space-y-1 p-1">
+                        {currencies.map(c => {
+                          const isSelected = c.id === selectedCalcCurrency;
+                          return (
+                            <button
+                              key={c.id}
+                              type="button"
+                              onClick={() => {
+                                setSelectedCalcCurrency(c.id);
+                                setIsDropdownOpen(false);
+                              }}
+                              className={`w-full px-3 py-2 rounded-lg flex items-center justify-between gap-2 transition text-left cursor-pointer ${
+                                isSelected ? 'bg-emerald-500/20 border border-emerald-500/40 text-white' : 'hover:bg-white/10 text-white/80'
+                              }`}
+                            >
+                              <div className="flex items-center gap-2.5 overflow-hidden">
+                                <div className="w-6 h-6 rounded-lg bg-white/10 border border-white/10 flex items-center justify-center shrink-0 overflow-hidden p-0.5">
+                                  {renderCurrencyVisual(c, "w-3.5 h-3.5")}
+                                </div>
+                                <span className="text-xs font-bold text-white truncate">{c.name}</span>
+                              </div>
+                              {isSelected && <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" />}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
                   
                   <div className="px-3.5 py-2 rounded-xl bg-white/[0.04] border border-white/10 flex items-center justify-between">
                     <span className="text-xs text-white/50 font-bold">পরিমাণ:</span>
