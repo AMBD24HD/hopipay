@@ -158,62 +158,63 @@ export default function OrderForm({
 
       <form onSubmit={handleSubmit} className="ios-glass p-6 sm:p-8 rounded-[30px] border border-white/10 space-y-6">
         {/* Method Select */}
-        <div className="space-y-1.5 relative">
+        <div className="space-y-1.5 relative z-40">
           <label className="text-[10px] font-black text-emerald-400 uppercase tracking-widest block ml-1">১. মেথড সিলেক্ট করুন</label>
           
-          {/* Custom Select Box */}
           <div className="relative">
             <button
               type="button"
               onClick={() => setIsCurrencyDropdownOpen(!isCurrencyDropdownOpen)}
-              className="w-full px-4 py-3.5 rounded-2xl bg-black/40 border border-white/10 text-white font-bold text-sm flex items-center justify-between gap-3 focus:outline-none focus:border-emerald-500 transition cursor-pointer"
+              className="w-full px-4 py-3.5 rounded-2xl bg-black/50 border border-white/15 text-white font-bold text-sm flex items-center justify-between gap-3 focus:outline-none focus:border-emerald-500 transition cursor-pointer"
             >
               <div className="flex items-center gap-3 overflow-hidden">
                 <div className="w-8 h-8 rounded-xl bg-white/10 border border-white/10 flex items-center justify-center shrink-0 overflow-hidden p-1">
                   {renderCurrencyVisual(selectedCurrency, "w-5 h-5")}
                 </div>
                 <div className="text-left truncate">
-                  <p className="text-sm font-black text-white truncate">{selectedCurrency?.name}</p>
+                  <p className="text-xs sm:text-sm font-black text-white truncate">{selectedCurrency?.name}</p>
                   <p className="text-[11px] text-emerald-400 font-semibold">
                     {orderType === 'sell' ? `১$ = ${selectedCurrency?.sellRate}৳ (সেল)` : `১$ = ${selectedCurrency?.buyRate}৳ (বাই)`}
                   </p>
                 </div>
               </div>
-              <ChevronDown className={`w-4 h-4 text-white/60 transition-transform ${isCurrencyDropdownOpen ? 'rotate-180' : ''}`} />
+              <ChevronDown className={`w-4 h-4 text-white/60 transition-transform shrink-0 ${isCurrencyDropdownOpen ? 'rotate-180' : ''}`} />
             </button>
 
-            {/* Dropdown Menu */}
+            {/* Dropdown Menu with internal scroll */}
             {isCurrencyDropdownOpen && (
-              <div className="absolute top-full left-0 right-0 mt-2 z-50 ios-glass rounded-2xl border border-white/15 bg-[#0c1710]/95 shadow-2xl overflow-hidden max-h-64 overflow-y-auto space-y-1 p-1.5">
-                {currencies.map(c => {
-                  const isSelected = c.id === selectedCurrencyId;
-                  return (
-                    <button
-                      key={c.id}
-                      type="button"
-                      onClick={() => {
-                        setSelectedCurrencyId(c.id);
-                        setIsCurrencyDropdownOpen(false);
-                      }}
-                      className={`w-full px-3.5 py-3 rounded-xl flex items-center justify-between gap-3 transition text-left cursor-pointer ${
-                        isSelected ? 'bg-emerald-500/20 border border-emerald-500/40 text-white' : 'hover:bg-white/10 text-white/80'
-                      }`}
-                    >
-                      <div className="flex items-center gap-3 overflow-hidden">
-                        <div className="w-8 h-8 rounded-xl bg-white/10 border border-white/10 flex items-center justify-center shrink-0 overflow-hidden p-1">
-                          {renderCurrencyVisual(c, "w-5 h-5")}
+              <div className="absolute top-full left-0 right-0 mt-2 z-50 ios-glass rounded-2xl border border-white/15 bg-[#070e17]/95 shadow-2xl overflow-hidden p-1.5">
+                <div className="max-h-56 overflow-y-auto overflow-x-hidden space-y-1.5 pr-1 custom-scrollbar">
+                  {currencies.map(c => {
+                    const isSelected = c.id === selectedCurrencyId;
+                    return (
+                      <button
+                        key={c.id}
+                        type="button"
+                        onClick={() => {
+                          setSelectedCurrencyId(c.id);
+                          setIsCurrencyDropdownOpen(false);
+                        }}
+                        className={`w-full px-3.5 py-3 rounded-xl flex items-center justify-between gap-3 transition text-left cursor-pointer ${
+                          isSelected ? 'bg-emerald-500/25 border border-emerald-500/50 text-white' : 'hover:bg-white/10 text-white/80'
+                        }`}
+                      >
+                        <div className="flex items-center gap-3 overflow-hidden">
+                          <div className="w-8 h-8 rounded-xl bg-white/10 border border-white/10 flex items-center justify-center shrink-0 overflow-hidden p-1">
+                            {renderCurrencyVisual(c, "w-5 h-5")}
+                          </div>
+                          <div className="truncate">
+                            <p className="text-xs font-black text-white truncate">{c.name}</p>
+                            <p className="text-[10px] text-emerald-300 font-semibold">
+                              {orderType === 'sell' ? `১$ = ${c.sellRate}৳ (সেল)` : `১$ = ${c.buyRate}৳ (বাই)`}
+                            </p>
+                          </div>
                         </div>
-                        <div className="truncate">
-                          <p className="text-xs font-black text-white truncate">{c.name}</p>
-                          <p className="text-[10px] text-emerald-300 font-semibold">
-                            {orderType === 'sell' ? `১$ = ${c.sellRate}৳ (সেল)` : `১$ = ${c.buyRate}৳ (বাই)`}
-                          </p>
-                        </div>
-                      </div>
-                      {isSelected && <Check className="w-4 h-4 text-emerald-400 shrink-0" />}
-                    </button>
-                  );
-                })}
+                        {isSelected && <Check className="w-4 h-4 text-emerald-400 shrink-0" />}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
             )}
           </div>

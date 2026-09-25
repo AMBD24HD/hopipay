@@ -71,6 +71,10 @@ export default function App() {
     }
     return 'home';
   });
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+  }, [view]);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [currencies, setCurrencies] = useState<Currency[]>(() => {
     const saved = localStorage.getItem('velopay_currencies') || localStorage.getItem('hopi_currencies');
