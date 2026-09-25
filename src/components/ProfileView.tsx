@@ -25,6 +25,8 @@ interface ProfileViewProps {
   mode?: 'all' | 'profile' | 'orders';
   onNavigate?: (view: 'home' | 'order' | 'order-list' | 'profile' | 'admin') => void;
   whatsapp?: string;
+  operationHours?: string;
+  supportPhone?: string;
   onUpdateAvatar?: (avatarUrl: string) => void;
 }
 
@@ -36,6 +38,8 @@ export default function ProfileView({
   mode = 'all',
   onNavigate,
   whatsapp = '8801604366679',
+  operationHours,
+  supportPhone,
   onUpdateAvatar
 }: ProfileViewProps) {
   const [isUploading, setIsUploading] = useState(false);
@@ -327,7 +331,7 @@ export default function ProfileView({
               <div>
                 <p className="text-[11px] text-white/40 uppercase font-black tracking-wider">অপারেশন সময়</p>
                 <p className="text-white font-bold text-xs sm:text-sm mt-0.5">
-                  সকাল ১০:০০ টা থেকে রাত ১০:০০ টা (প্রতিদিন)
+                  {operationHours || 'সকাল ১০:০০ টা থেকে রাত ১০:০০ টা (প্রতিদিন)'}
                 </p>
               </div>
             </div>
@@ -339,9 +343,12 @@ export default function ProfileView({
               </div>
               <div>
                 <p className="text-[11px] text-white/40 uppercase font-black tracking-wider">হেল্পলাইন ও সাপোর্ট নম্বর</p>
-                <p className="text-emerald-400 font-mono font-black text-xs sm:text-sm mt-0.5">
-                  01604366679
-                </p>
+                <a
+                  href={`tel:${(supportPhone || '01604366679').replace(/[^0-9+]/g, '')}`}
+                  className="text-emerald-400 font-mono font-black text-xs sm:text-sm mt-0.5 hover:underline block"
+                >
+                  {supportPhone || '01604366679'}
+                </a>
               </div>
             </div>
           </div>

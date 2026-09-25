@@ -1165,133 +1165,6 @@ export default function App() {
                   currencies={currencies} 
                   onStartExchange={handleStartExchange} 
                 />
-
-                {/* সহায়তা ও তথ্য (Support & Info) Section - Fully Admin Configurable */}
-                <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br from-[#0c1422]/90 via-[#070d18]/90 to-[#040810]/95 backdrop-blur-2xl p-6 sm:p-8 shadow-2xl shadow-emerald-950/20 space-y-6">
-                  {/* Decorative glowing gradient accents */}
-                  <div className="absolute -top-20 -right-20 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
-                  <div className="absolute -bottom-20 -left-20 w-64 h-64 bg-teal-500/10 rounded-full blur-3xl pointer-events-none" />
-
-                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-white/10 pb-5 relative z-10">
-                    <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-emerald-500 to-teal-600 flex items-center justify-center text-white shadow-lg shadow-emerald-500/25 shrink-0 border border-emerald-400/40">
-                        <Headphones className="w-6 h-6 text-white" />
-                      </div>
-                      <div>
-                        <h3 className="text-xl sm:text-2xl font-black text-white tracking-tight flex items-center gap-2">
-                          সহায়তা ও তথ্য <span className="text-emerald-400 text-sm sm:text-base font-bold font-sans">(Support & Info)</span>
-                        </h3>
-                        <p className="text-xs text-white/60 font-medium mt-0.5">
-                          যেকোনো লেনদেন বা ডলার ক্রয়-বিক্রয়ে তাত্ক্ষণিক সহায়তা পেতে যোগাযোগ করুন
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs font-bold">
-                        <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                        <span>সার্বক্ষণিক হেল্পডেস্ক</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 relative z-10">
-                    {/* Operation Hours Card */}
-                    <div className="p-5 rounded-2xl bg-white/[0.03] border border-white/10 hover:border-emerald-500/30 transition-all duration-300 group hover:bg-white/[0.05] space-y-3">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 flex items-center justify-center group-hover:scale-110 transition-transform shadow-sm">
-                          <Clock className="w-5 h-5" />
-                        </div>
-                        <div>
-                          <span className="text-[11px] font-bold text-white/50 uppercase tracking-wider block">অপারেশন সময়</span>
-                          <span className="text-xs font-black text-emerald-300">কার্যক্রম ও অর্ডার প্রসেসিং</span>
-                        </div>
-                      </div>
-                      <div className="p-3.5 rounded-xl bg-black/40 border border-white/5 space-y-1">
-                        <p className="text-sm font-black text-white leading-relaxed">
-                          {settings.operationHours || 'সকাল ১০:০০ টা থেকে রাত ১০:০০ টা (প্রতিদিন)'}
-                        </p>
-                        <p className="text-[11px] text-emerald-400 font-semibold flex items-center gap-1">
-                          <ShieldCheck className="w-3.5 h-3.5" /> প্রতি অর্ডারে ৫-১০ মিনিটে পেমেন্ট ক্লিয়ার
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* Helpline & Support Phone */}
-                    <div className="p-5 rounded-2xl bg-white/[0.03] border border-white/10 hover:border-emerald-500/30 transition-all duration-300 group hover:bg-white/[0.05] space-y-3">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-teal-500/15 border border-teal-500/30 text-teal-300 flex items-center justify-center group-hover:scale-110 transition-transform shadow-sm">
-                          <Phone className="w-5 h-5" />
-                        </div>
-                        <div>
-                          <span className="text-[11px] font-bold text-white/50 uppercase tracking-wider block">হেল্পলাইন ও সাপোর্ট নম্বর</span>
-                          <span className="text-xs font-black text-teal-300">সরাসরি কল বা সহায়তা</span>
-                        </div>
-                      </div>
-                      <div className="p-3 rounded-xl bg-black/40 border border-white/5 flex items-center justify-between gap-2">
-                        <a 
-                          href={`tel:${(settings.supportPhone || '01604366679').replace(/[^0-9+]/g, '')}`}
-                          className="text-base sm:text-lg font-black text-emerald-400 font-mono tracking-wider hover:underline flex items-center gap-1.5"
-                        >
-                          <Phone className="w-4 h-4 text-emerald-400 shrink-0" />
-                          <span>{settings.supportPhone || '01604366679'}</span>
-                        </a>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            navigator.clipboard.writeText(settings.supportPhone || '01604366679');
-                            showToast('হেল্পলাইন নম্বর কপি করা হয়েছে!', 'success');
-                          }}
-                          className="px-2.5 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white text-xs font-bold transition flex items-center gap-1 cursor-pointer active:scale-95"
-                          title="নম্বর কপি করুন"
-                        >
-                          <Copy className="w-3.5 h-3.5" />
-                          <span>কপি</span>
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Live Chat & WhatsApp Card */}
-                    <div className="p-5 rounded-2xl bg-white/[0.03] border border-white/10 hover:border-emerald-500/30 transition-all duration-300 group hover:bg-white/[0.05] space-y-3 md:col-span-2 lg:col-span-1">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500/20 to-teal-500/20 border border-emerald-500/30 text-emerald-300 flex items-center justify-center group-hover:scale-110 transition-transform shadow-sm">
-                          <MessageCircle className="w-5 h-5" />
-                        </div>
-                        <div>
-                          <span className="text-[11px] font-bold text-white/50 uppercase tracking-wider block">লাইভ সাপোর্ট চ্যানেল</span>
-                          <span className="text-xs font-black text-white">তাত্ক্ষণিক মেসেজিং</span>
-                        </div>
-                      </div>
-                      <div className="grid grid-cols-2 gap-2">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (!currentUser) {
-                              setIsAuthOpen(true);
-                              showToast(isCurrentUserBanned ? 'লাইভ চ্যাট ব্যবহারের জন্য আগে লগইন করুন!' : 'অ্যাডমিন সাপোর্ট ব্যবহারের জন্য আগে লগইন করুন!', 'info');
-                            } else {
-                              setIsChatOpen(true);
-                            }
-                          }}
-                          className="py-2.5 px-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-white font-bold text-xs transition flex items-center justify-center gap-1.5 shadow-md shadow-emerald-950 cursor-pointer active:scale-95"
-                        >
-                          <Headphones className="w-3.5 h-3.5" />
-                          <span>{isCurrentUserBanned ? 'লাইভ চ্যাট' : 'অ্যাডমিন সাপোর্ট'}</span>
-                        </button>
-
-                        <a
-                          href={`https://wa.me/${(settings.whatsapp || settings.supportPhone || '01604366679').replace(/[^0-9]/g, '')}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="py-2.5 px-3 rounded-xl bg-gradient-to-r from-rose-600 via-rose-500 to-red-600 hover:from-rose-500 hover:to-red-500 text-white font-bold text-xs transition flex items-center justify-center gap-1.5 shadow-md cursor-pointer active:scale-95 border border-rose-400/40"
-                        >
-                          <MessageCircle className="w-3.5 h-3.5" />
-                          <span>হোয়াটসঅ্যাপ</span>
-                        </a>
-                      </div>
-                    </div>
-                  </div>
-                </div>
               </motion.div>
             )}
 
@@ -1333,6 +1206,8 @@ export default function App() {
                   mode="orders"
                   onNavigate={(v) => setView(v)}
                   whatsapp={settings.whatsapp}
+                  operationHours={settings.operationHours}
+                  supportPhone={settings.supportPhone}
                   onUpdateAvatar={handleUpdateAvatar}
                 />
               </motion.div>
@@ -1355,6 +1230,8 @@ export default function App() {
                   mode="profile"
                   onNavigate={(v) => setView(v)}
                   whatsapp={settings.whatsapp}
+                  operationHours={settings.operationHours}
+                  supportPhone={settings.supportPhone}
                   onUpdateAvatar={handleUpdateAvatar}
                 />
               </motion.div>
