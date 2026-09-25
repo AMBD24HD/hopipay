@@ -60,6 +60,7 @@ export interface AdminSettings {
   adminPin?: string;        // Security PIN for admin panel (e.g. 1234)
   adminEmail?: string;      // Admin Login Email (e.g. admin@velopay.com)
   adminPassword?: string;   // Admin Login Password (e.g. admin1234)
+  imgbbApiKey?: string;     // ImgBB API Key for image uploads
   bannedUsers?: string[];   // List of banned user IDs or emails
 }
 

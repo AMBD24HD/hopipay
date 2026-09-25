@@ -56,8 +56,19 @@ export function compressImage(file: File, maxDim = 512, quality = 0.85): Promise
 }
 
 export async function uploadImageToImgBB(file: File): Promise<string> {
-  // Use provided environment key or fallback public demo key
-  const apiKey = import.meta.env.VITE_IMGBB_API_KEY || '2d9215ef23267d3536fa189c4708ff39';
+  // Use provided environment key, or admin saved key in localStorage, or fallback demo key
+  let apiKey = import.meta.env.VITE_IMGBB_API_KEY || '2d9215ef23267d3536fa189c4708ff39';
+  if (typeof window !== 'undefined') {
+    try {
+      const saved = localStorage.getItem('velopay_settings') || localStorage.getItem('hopi_settings');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.imgbbApiKey && parsed.imgbbApiKey.trim()) {
+          apiKey = parsed.imgbbApiKey.trim();
+        }
+      }
+    } catch (e) {}
+  }
 
   // Basic validation: max 20MB
   if (file.size > 20 * 1024 * 1024) {

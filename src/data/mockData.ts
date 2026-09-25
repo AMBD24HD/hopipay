@@ -162,6 +162,7 @@ export const INITIAL_SETTINGS: AdminSettings = {
   activeUsersCount: 1420,
   adminPin: '1234',
   adminEmail: 'trxrafiff@gmail.com',
-  adminPassword: ''
+  adminPassword: '',
+  imgbbApiKey: ''
 };
 

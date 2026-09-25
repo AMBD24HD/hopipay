@@ -2134,6 +2134,27 @@ export default function AdminPanel({
           </div>
 
           <form onSubmit={handleSaveSettings} className="ios-glass p-6 sm:p-8 rounded-3xl border border-white/10 space-y-6 bg-[#0c1422]/80">
+            {/* ImgBB API Key Configuration */}
+            <div className="p-5 rounded-2xl bg-black/40 border border-emerald-500/40 space-y-3 shadow-lg shadow-emerald-500/10">
+              <h4 className="text-sm font-black text-emerald-400 uppercase tracking-wider flex items-center gap-2">
+                <Upload className="w-4 h-4" /> ছবি আপলোড API সেটিংস (ImgBB API Key)
+              </h4>
+              <p className="text-xs text-white/60 leading-relaxed">
+                ইউজারদের প্রোফাইল ছবি এবং অন্যান্য আপলোডের জন্য আপনার নিজস্ব ImgBB API Key এখানে যুক্ত করুন।
+              </p>
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-white/60">ImgBB API Key</label>
+                <input
+                  type="text"
+                  placeholder="আপনার ImgBB API Key দিন (যেমন: 2d9215ef...)"
+                  value={settingsForm.imgbbApiKey || ''}
+                  onChange={(e) => setSettingsForm({ ...settingsForm, imgbbApiKey: e.target.value })}
+                  onBlur={() => onUpdateSettings(settingsForm)}
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-white/5 border border-white/15 text-white text-xs font-mono focus:border-emerald-500 focus:outline-none"
+                />
+              </div>
+            </div>
+
             {/* Key Platform Stats (Total Exchanged USD & Active Users) */}
             <div className="p-5 rounded-2xl bg-black/40 border border-white/10 space-y-4">
               <h4 className="text-sm font-black text-emerald-400 uppercase tracking-wider flex items-center gap-2">
@@ -2316,6 +2337,27 @@ export default function AdminPanel({
                     </button>
                   )}
                 </div>
+              </div>
+            </div>
+
+            {/* ImgBB API Key Configuration */}
+            <div className="p-5 rounded-2xl bg-black/40 border border-white/10 space-y-3">
+              <h4 className="text-sm font-black text-white flex items-center gap-2">
+                <Upload className="w-4 h-4 text-emerald-400" /> ছবি আপলোড API সেটিংস (ImgBB API Key)
+              </h4>
+              <p className="text-xs text-white/60 leading-relaxed">
+                ইউজারদের প্রোফাইল ছবি এবং অন্যান্য আপলোডের জন্য আপনার নিজস্ব ImgBB API Key এখানে যুক্ত করুন।
+              </p>
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-white/60">ImgBB API Key</label>
+                <input
+                  type="text"
+                  placeholder="আপনার ImgBB API Key দিন (যেমন: 2d9215ef...)"
+                  value={settingsForm.imgbbApiKey || ''}
+                  onChange={(e) => setSettingsForm({ ...settingsForm, imgbbApiKey: e.target.value })}
+                  onBlur={() => onUpdateSettings(settingsForm)}
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white text-xs font-mono"
+                />
               </div>
             </div>
 
