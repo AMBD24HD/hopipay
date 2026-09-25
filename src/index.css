@@ -6,10 +6,15 @@
   --font-sans: 'Hind Siliguri', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 }
 
-html, body {
+html, body, #root {
   overflow-x: hidden;
   width: 100%;
   max-width: 100vw;
+  box-sizing: border-box;
+}
+
+*, *:before, *:after {
+  box-sizing: border-box;
 }
 
 html, body, button, input, select, textarea, optgroup {
