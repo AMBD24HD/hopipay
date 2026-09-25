@@ -148,7 +148,7 @@ export default function App() {
       link.href = settings.siteFavicon;
     } else {
       link.setAttribute('type', 'image/svg+xml');
-      link.href = "data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚡</text></svg>";
+      link.href = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' stop-color='%2310b981'/%3E%3Cstop offset='100%25' stop-color='%2306b6d4'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='16' fill='%2307111e'/%3E%3Cpath d='M16 16 L32 48 L48 16 L39 16 L32 32 L25 16 Z' fill='url(%23g)'/%3E%3Ccircle cx='32' cy='20' r='3.5' fill='%2334d399'/%3E%3C/svg%3E";
     }
   }, [settings.siteFavicon]);
 

@@ -104,9 +104,11 @@ export default function AdminPanel({
   // Separate Per-User Chat states
   const [selectedChatUserId, setSelectedChatUserId] = useState<string | null>(null);
   const [chatSearchQuery, setChatSearchQuery] = useState('');
+  const [chatCategoryFilter, setChatCategoryFilter] = useState<'all' | 'live' | 'banned'>('all');
   const [previewModalUrl, setPreviewModalUrl] = useState<string | null>(null);
   const chatMessagesContainerRef = useRef<HTMLDivElement>(null);
   const chatMessagesEndRef = useRef<HTMLDivElement>(null);
+  const userListContainerRef = useRef<HTMLDivElement>(null);
 
   // Users Tab states
   const [userSearchQuery, setUserSearchQuery] = useState('');
@@ -124,7 +126,7 @@ export default function AdminPanel({
     setSettingsForm(adminSettings);
   }, [adminSettings]);
 
-  // Chat scroll helpers
+  // Chat scroll helpers (Right message pane)
   const scrollChatToTop = () => {
     if (chatMessagesContainerRef.current) {
       chatMessagesContainerRef.current.scrollTo({ top: 0, behavior: 'smooth' });
@@ -132,7 +134,29 @@ export default function AdminPanel({
   };
 
   const scrollChatToBottom = () => {
+    if (chatMessagesContainerRef.current) {
+      chatMessagesContainerRef.current.scrollTo({
+        top: chatMessagesContainerRef.current.scrollHeight,
+        behavior: 'smooth'
+      });
+    }
     chatMessagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  // User List scroll helpers (Left sidebar pane)
+  const scrollUserListToTop = () => {
+    if (userListContainerRef.current) {
+      userListContainerRef.current.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
+  const scrollUserListToBottom = () => {
+    if (userListContainerRef.current) {
+      userListContainerRef.current.scrollTo({
+        top: userListContainerRef.current.scrollHeight,
+        behavior: 'smooth'
+      });
+    }
   };
 
   // Comprehensive list of all site users from Firestore Auth, Orders, and Live Chat
@@ -1181,24 +1205,34 @@ export default function AdminPanel({
         </div>
       )}
 
-      {/* TAB 3: MULTI-USER SEPARATE LIVE CHAT INBOX */}
+      {/* TAB 3: MULTI-USER SEPARATE LIVE CHAT INBOX & BAN SUPPORT */}
       {activeTab === 'chat' && (
         <div className="space-y-4">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+          {/* Header Banner */}
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 bg-gradient-to-r from-[#0d1b2a] via-[#091522] to-[#07101a] p-4 sm:p-5 rounded-2xl border border-emerald-500/20 shadow-lg">
             <div>
-              <h3 className="text-xl font-black text-white flex items-center gap-2">
+              <h3 className="text-lg sm:text-xl font-black text-white flex items-center gap-2">
                 <MessageSquare className="w-5 h-5 text-emerald-400" /> ইউজার ভিত্তিক লাইভ চ্যাট পোর্টাল
               </h3>
-              <p className="text-xs text-white/50 mt-0.5">
+              <p className="text-xs text-white/60 mt-1">
                 প্রতিটি ইউজারের জন্য আলাদা ইনবক্স। ইউজার সিলেক্ট করে তাদের সাথে পৃথকভাবে কথা বলুন।
               </p>
             </div>
-            <div className="flex items-center gap-2">
-              <span className="px-3 py-1 rounded-xl bg-white/5 border border-white/10 text-xs font-bold text-white/70">
-                মোট ইউজার: {userThreads.length}
+            
+            {/* Quick Summary Pill Badges */}
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="px-3 py-1.5 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-xs font-bold text-emerald-300 flex items-center gap-1.5">
+                <MessageCircle className="w-3.5 h-3.5 text-emerald-400" />
+                <span>লাইভ চ্যাট: {userThreads.filter(t => !t.isBanned).length}</span>
               </span>
+
+              <span className="px-3 py-1.5 rounded-xl bg-rose-500/15 border border-rose-500/30 text-xs font-bold text-rose-300 flex items-center gap-1.5">
+                <Ban className="w-3.5 h-3.5 text-rose-400" />
+                <span>ব্যান সাপোর্ট: {userThreads.filter(t => t.isBanned).length}</span>
+              </span>
+
               {userThreads.reduce((acc, t) => acc + t.unreadCount, 0) > 0 && (
-                <span className="px-3 py-1 rounded-xl bg-rose-500/20 border border-rose-500/30 text-xs font-black text-rose-400 animate-pulse">
+                <span className="px-3 py-1.5 rounded-xl bg-rose-500 border border-rose-400 text-xs font-black text-white animate-pulse shadow-md">
                   নতুন মেসেজ: {userThreads.reduce((acc, t) => acc + t.unreadCount, 0)}
                 </span>
               )}
@@ -1206,11 +1240,56 @@ export default function AdminPanel({
           </div>
 
           {/* Dual Panel Chat Layout */}
-          <div className="ios-glass rounded-3xl border border-white/10 overflow-hidden grid grid-cols-1 lg:grid-cols-12 h-[640px] bg-[#0c1422]/90 shadow-2xl">
+          <div className="ios-glass rounded-3xl border border-white/10 overflow-hidden grid grid-cols-1 lg:grid-cols-12 h-[680px] bg-[#0c1422]/95 shadow-2xl">
             {/* Left Sidebar: User Conversations List (Col 4 / 12) */}
-            <div className="lg:col-span-4 border-r border-white/10 flex flex-col h-full bg-black/25">
-              {/* Search User Input */}
-              <div className="p-3.5 border-b border-white/10 shrink-0">
+            <div className="lg:col-span-4 border-r border-white/10 flex flex-col h-full bg-black/35">
+              {/* Category Filter Tabs: লাইভ চ্যাট vs ব্যান সাপোর্ট vs সব */}
+              <div className="p-2.5 border-b border-white/10 bg-black/40 flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => setChatCategoryFilter('all')}
+                  className={`flex-1 py-2 px-2 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer ${
+                    chatCategoryFilter === 'all'
+                      ? 'bg-white/15 text-white shadow-sm border border-white/20'
+                      : 'text-white/50 hover:text-white hover:bg-white/5'
+                  }`}
+                >
+                  <Users className="w-3.5 h-3.5" />
+                  <span>সকল ({userThreads.length})</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setChatCategoryFilter('live')}
+                  className={`flex-1 py-2 px-2 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer ${
+                    chatCategoryFilter === 'live'
+                      ? 'bg-emerald-500/20 text-emerald-300 shadow-sm border border-emerald-500/40'
+                      : 'text-white/50 hover:text-white hover:bg-white/5'
+                  }`}
+                >
+                  <MessageCircle className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>লাইভ চ্যাট ({userThreads.filter(t => !t.isBanned).length})</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setChatCategoryFilter('banned')}
+                  className={`flex-1 py-2 px-2 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer relative ${
+                    chatCategoryFilter === 'banned'
+                      ? 'bg-rose-500/25 text-rose-300 shadow-sm border border-rose-500/50'
+                      : 'text-white/50 hover:text-rose-300 hover:bg-white/5'
+                  }`}
+                >
+                  <Ban className="w-3.5 h-3.5 text-rose-400" />
+                  <span>ব্যান সাপোর্ট ({userThreads.filter(t => t.isBanned).length})</span>
+                  {userThreads.some(t => t.isBanned && t.unreadCount > 0) && (
+                    <span className="w-2 h-2 rounded-full bg-rose-500 absolute top-1.5 right-1.5 animate-ping" />
+                  )}
+                </button>
+              </div>
+
+              {/* Search User Input & Scroll Controls for User List */}
+              <div className="p-3 border-b border-white/10 shrink-0 space-y-2 bg-black/20">
                 <div className="relative">
                   <Search className="w-4 h-4 text-white/40 absolute left-3.5 top-1/2 -translate-y-1/2" />
                   <input
@@ -1218,112 +1297,172 @@ export default function AdminPanel({
                     placeholder="ইউজারের নাম বা ইমেইল খুঁজুন..."
                     value={chatSearchQuery}
                     onChange={(e) => setChatSearchQuery(e.target.value)}
-                    className="w-full pl-9 pr-3.5 py-2 rounded-xl bg-white/5 border border-white/10 text-xs text-white placeholder-white/40 focus:outline-none focus:border-emerald-500 transition"
+                    className="w-full pl-9 pr-8 py-2 rounded-xl bg-white/5 border border-white/10 text-xs text-white placeholder-white/40 focus:outline-none focus:border-emerald-500 transition"
                   />
                   {chatSearchQuery && (
                     <button
                       onClick={() => setChatSearchQuery('')}
-                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-white/40 hover:text-white"
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-white/40 hover:text-white p-1"
                     >
                       <X className="w-3.5 h-3.5" />
                     </button>
                   )}
                 </div>
+
+                {/* Left Sidebar User List Scroll Top / Bottom Controls */}
+                <div className="flex items-center justify-between gap-1.5 pt-0.5">
+                  <span className="text-[10px] text-white/40 font-bold">ইউজার লিস্ট স্ক্রোল:</span>
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={scrollUserListToTop}
+                      title="ইউজার তালিকার শুরুতে যান"
+                      className="px-2 py-1 rounded-lg bg-white/5 hover:bg-white/15 text-white/80 hover:text-white text-[10px] font-bold flex items-center gap-1 transition active:scale-95 border border-white/10 cursor-pointer"
+                    >
+                      <ChevronUp className="w-3 h-3 text-emerald-400" />
+                      <span>⬆ উপরে (Top)</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={scrollUserListToBottom}
+                      title="ইউজার তালিকার শেষে যান"
+                      className="px-2 py-1 rounded-lg bg-white/5 hover:bg-white/15 text-white/80 hover:text-white text-[10px] font-bold flex items-center gap-1 transition active:scale-95 border border-white/10 cursor-pointer"
+                    >
+                      <ChevronDown className="w-3 h-3 text-emerald-400" />
+                      <span>⬇ নিচে (Bottom)</span>
+                    </button>
+                  </div>
+                </div>
               </div>
 
-              {/* User Threads List */}
-              <div className="flex-1 overflow-y-auto divide-y divide-white/5 scrollbar-thin scrollbar-thumb-white/10">
-                {userThreads.length === 0 ? (
-                  <div className="p-8 text-center text-white/40 space-y-2">
-                    <Users className="w-10 h-10 mx-auto opacity-30" />
-                    <p className="text-xs font-bold">এখনো কোনো ইউজার মেসেজ দেয়নি</p>
-                    <p className="text-[11px] text-white/30">ইউজাররা সাইট থেকে চ্যাট করলেই এখানে তাদের পৃথক নাম প্রদর্শিত হবে।</p>
-                  </div>
-                ) : (
-                  userThreads
+              {/* User Threads List Container */}
+              <div 
+                ref={userListContainerRef}
+                className="flex-1 overflow-y-auto divide-y divide-white/5 scrollbar-thin scrollbar-thumb-white/10"
+              >
+                {(() => {
+                  const filteredThreads = userThreads
+                    .filter(t => {
+                      if (chatCategoryFilter === 'live') return !t.isBanned;
+                      if (chatCategoryFilter === 'banned') return t.isBanned;
+                      return true;
+                    })
                     .filter(t => 
                       t.userName.toLowerCase().includes(chatSearchQuery.toLowerCase()) ||
                       t.userEmail.toLowerCase().includes(chatSearchQuery.toLowerCase())
-                    )
-                    .map((thread) => {
-                      const isSelected = selectedChatUserId === thread.userId;
-                      return (
-                        <div
-                          key={thread.userId}
-                          onClick={() => setSelectedChatUserId(thread.userId)}
-                          className={`p-3.5 flex items-start gap-3 cursor-pointer transition relative group ${
-                            isSelected
-                              ? 'bg-emerald-500/15 border-l-4 border-l-emerald-400'
+                    );
+
+                  if (filteredThreads.length === 0) {
+                    return (
+                      <div className="p-8 text-center text-white/40 space-y-2">
+                        {chatCategoryFilter === 'banned' ? (
+                          <>
+                            <Ban className="w-10 h-10 mx-auto text-rose-400/30" />
+                            <p className="text-xs font-bold text-rose-300/80">কোনো ব্যানড ইউজারের সাপোর্ট মেসেজ নেই</p>
+                            <p className="text-[11px] text-white/30">ব্যান হওয়া কোনো ইউজার লাইভ চ্যাটে মেসেজ দিলে এখানে দেখা যাবে।</p>
+                          </>
+                        ) : (
+                          <>
+                            <Users className="w-10 h-10 mx-auto opacity-30" />
+                            <p className="text-xs font-bold">এখনো কোনো ইউজার মেসেজ দেয়নি</p>
+                            <p className="text-[11px] text-white/30">ইউজাররা সাইট থেকে চ্যাট করলেই এখানে তাদের পৃথক নাম প্রদর্শিত হবে।</p>
+                          </>
+                        )}
+                      </div>
+                    );
+                  }
+
+                  return filteredThreads.map((thread) => {
+                    const isSelected = selectedChatUserId === thread.userId;
+                    return (
+                      <div
+                        key={thread.userId}
+                        onClick={() => setSelectedChatUserId(thread.userId)}
+                        className={`p-3.5 flex items-start gap-3 cursor-pointer transition relative group ${
+                          isSelected
+                            ? thread.isBanned
+                              ? 'bg-rose-500/20 border-l-4 border-l-rose-400'
+                              : 'bg-emerald-500/15 border-l-4 border-l-emerald-400'
+                            : thread.isBanned
+                              ? 'hover:bg-rose-500/10 bg-rose-950/20'
                               : 'hover:bg-white/[0.04]'
-                          }`}
-                        >
-                          {/* User Avatar */}
-                          <div className="relative shrink-0 mt-0.5">
-                            {thread.userAvatar ? (
-                              <img
-                                src={thread.userAvatar}
-                                alt={thread.userName}
-                                referrerPolicy="no-referrer"
-                                className="w-10 h-10 rounded-full object-cover border border-white/10"
-                              />
-                            ) : (
-                              <div className={`w-10 h-10 rounded-full flex items-center justify-center font-black text-xs border ${
-                                isSelected
+                        }`}
+                      >
+                        {/* User Avatar */}
+                        <div className="relative shrink-0 mt-0.5">
+                          {thread.userAvatar ? (
+                            <img
+                              src={thread.userAvatar}
+                              alt={thread.userName}
+                              referrerPolicy="no-referrer"
+                              className={`w-10 h-10 rounded-full object-cover border ${
+                                thread.isBanned ? 'border-rose-500/60' : 'border-white/10'
+                              }`}
+                            />
+                          ) : (
+                            <div className={`w-10 h-10 rounded-full flex items-center justify-center font-black text-xs border ${
+                              thread.isBanned
+                                ? 'bg-rose-500/30 text-rose-300 border-rose-500/50'
+                                : isSelected
                                   ? 'bg-emerald-500/30 text-emerald-300 border-emerald-400/50 shadow-md shadow-emerald-500/20'
                                   : 'bg-white/10 text-white/80 border-white/10'
+                            }`}>
+                              {thread.userName.charAt(0).toUpperCase()}
+                            </div>
+                          )}
+                          {thread.unreadCount > 0 && (
+                            <span className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full bg-rose-500 text-white text-[9px] font-bold flex items-center justify-center border-2 border-[#0c1422] animate-ping" />
+                          )}
+                        </div>
+
+                        {/* User Info & Message Snippet */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between gap-1 mb-0.5">
+                            <div className="flex items-center gap-1.5 min-w-0">
+                              <h4 className={`text-xs font-black truncate ${
+                                isSelected 
+                                  ? thread.isBanned ? 'text-rose-300' : 'text-emerald-300' 
+                                  : 'text-white'
                               }`}>
-                                {thread.userName.charAt(0).toUpperCase()}
-                              </div>
-                            )}
-                            {thread.unreadCount > 0 && (
-                              <span className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-rose-500 border-2 border-[#0c1422] animate-ping" />
+                                {thread.userName}
+                              </h4>
+                              {thread.isBanned && (
+                                <span className="px-1.5 py-0.2 rounded-full bg-rose-500/25 text-rose-400 border border-rose-500/50 text-[8px] font-black uppercase shrink-0">
+                                  ব্যান সাপোর্ট
+                                </span>
+                              )}
+                            </div>
+                            {thread.lastMessage && (
+                              <span className="text-[9px] text-white/40 shrink-0 font-mono">
+                                {new Date(thread.lastMessage.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                              </span>
                             )}
                           </div>
 
-                          {/* User Info & Message Snippet */}
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center justify-between gap-1 mb-0.5">
-                              <div className="flex items-center gap-1.5 min-w-0">
-                                <h4 className={`text-xs font-black truncate ${isSelected ? 'text-emerald-300' : 'text-white'}`}>
-                                  {thread.userName}
-                                </h4>
-                                {thread.isBanned && (
-                                  <span className="px-1.5 py-0.2 rounded-full bg-rose-500/20 text-rose-400 border border-rose-500/40 text-[8px] font-black uppercase shrink-0">
-                                    BANNED
-                                  </span>
-                                )}
-                              </div>
-                              {thread.lastMessage && (
-                                <span className="text-[9px] text-white/40 shrink-0 font-mono">
-                                  {new Date(thread.lastMessage.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                </span>
-                              )}
-                            </div>
+                          <p className="text-[11px] text-white/50 truncate font-mono mb-1">
+                            {thread.userEmail}
+                          </p>
 
-                            <p className="text-[11px] text-white/50 truncate font-mono mb-1">
-                              {thread.userEmail}
+                          <div className="flex items-center justify-between gap-1">
+                            <p className="text-[11px] text-white/60 truncate flex-1">
+                              {thread.lastMessage ? thread.lastMessage.text : 'চ্যাট শুরু করুন...'}
                             </p>
-
-                            <div className="flex items-center justify-between gap-1">
-                              <p className="text-[11px] text-white/60 truncate flex-1">
-                                {thread.lastMessage ? thread.lastMessage.text : 'চ্যাট শুরু করুন...'}
-                              </p>
-                              {thread.unreadCount > 0 && (
-                                <span className="px-1.5 py-0.5 rounded-full bg-rose-500 text-white text-[9px] font-black shrink-0">
-                                  {thread.unreadCount}
-                                </span>
-                              )}
-                              {thread.totalOrders > 0 && (
-                                <span className="px-1.5 py-0.5 rounded-md bg-white/5 text-emerald-400 text-[9px] font-bold shrink-0">
-                                  {thread.totalOrders} অর্ডার
-                                </span>
-                              )}
-                            </div>
+                            {thread.unreadCount > 0 && (
+                              <span className="px-1.5 py-0.5 rounded-full bg-rose-500 text-white text-[9px] font-black shrink-0">
+                                {thread.unreadCount}
+                              </span>
+                            )}
+                            {thread.totalOrders > 0 && (
+                              <span className="px-1.5 py-0.5 rounded-md bg-white/5 text-emerald-400 text-[9px] font-bold shrink-0">
+                                {thread.totalOrders} অর্ডার
+                              </span>
+                            )}
                           </div>
                         </div>
-                      );
-                    })
-                )}
+                      </div>
+                    );
+                  });
+                })()}
               </div>
             </div>
 
@@ -1362,20 +1501,28 @@ export default function AdminPanel({
                             src={currentThread.userAvatar}
                             alt={currentThread.userName}
                             referrerPolicy="no-referrer"
-                            className="w-11 h-11 rounded-full object-cover border border-emerald-500/40 shadow-md shadow-emerald-500/20"
+                            className={`w-11 h-11 rounded-full object-cover border shadow-md ${
+                              currentThread.isBanned 
+                                ? 'border-rose-500/60 shadow-rose-950/40' 
+                                : 'border-emerald-500/40 shadow-emerald-500/20'
+                            }`}
                           />
                         ) : (
-                          <div className="w-11 h-11 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 flex items-center justify-center font-black text-sm shadow-md">
+                          <div className={`w-11 h-11 rounded-full border text-sm font-black flex items-center justify-center shadow-md ${
+                            currentThread.isBanned
+                              ? 'bg-rose-500/20 border-rose-500/50 text-rose-300'
+                              : 'bg-emerald-500/20 border-emerald-500/40 text-emerald-300'
+                          }`}>
                             {currentThread.userName.charAt(0).toUpperCase()}
                           </div>
                         )}
                         <div>
                           <div className="flex items-center gap-2">
                             <h4 className="text-sm font-black text-white">{currentThread.userName}</h4>
-                            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                            <span className={`w-2 h-2 rounded-full ${currentThread.isBanned ? 'bg-rose-500 animate-pulse' : 'bg-emerald-400 animate-pulse'}`} />
                             {currentThread.isBanned ? (
                               <span className="px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-400 text-[10px] font-black border border-rose-500/40 animate-pulse">
-                                অ্যাকাউন্ট ব্যান করা (BANNED)
+                                অ্যাকাউন্ট ব্যান করা (ব্যান সাপোর্ট ইনবক্স)
                               </span>
                             ) : (
                               currentThread.totalOrders > 0 && (
@@ -1390,24 +1537,25 @@ export default function AdminPanel({
                       </div>
 
                       <div className="flex items-center gap-2 flex-wrap">
-                        {/* Quick Scroll Up Button */}
+                        {/* Top Bar Quick Scroll Up & Down Buttons */}
                         <button
                           type="button"
                           onClick={scrollChatToTop}
-                          title="উপরে যান (Scroll to Top)"
-                          className="w-8 h-8 rounded-xl bg-white/5 hover:bg-white/15 text-white/70 hover:text-white flex items-center justify-center transition active:scale-90 cursor-pointer border border-white/10"
+                          title="চ্যাটের একদম শুরুতে যান"
+                          className="px-2.5 py-1.5 rounded-xl bg-white/5 hover:bg-white/15 text-white/80 hover:text-white text-xs font-bold flex items-center gap-1 transition active:scale-90 cursor-pointer border border-white/10"
                         >
-                          <ChevronUp className="w-4 h-4" />
+                          <ChevronUp className="w-3.5 h-3.5 text-emerald-400" />
+                          <span>⬆ উপরে (Top)</span>
                         </button>
 
-                        {/* Quick Scroll Down Button */}
                         <button
                           type="button"
                           onClick={scrollChatToBottom}
-                          title="নিচে যান (Scroll to Bottom)"
-                          className="w-8 h-8 rounded-xl bg-white/5 hover:bg-white/15 text-white/70 hover:text-white flex items-center justify-center transition active:scale-90 cursor-pointer border border-white/10"
+                          title="চ্যাটের একদম শেষে যান"
+                          className="px-2.5 py-1.5 rounded-xl bg-white/5 hover:bg-white/15 text-white/80 hover:text-white text-xs font-bold flex items-center gap-1 transition active:scale-90 cursor-pointer border border-white/10"
                         >
-                          <ChevronDown className="w-4 h-4" />
+                          <ChevronDown className="w-3.5 h-3.5 text-emerald-400" />
+                          <span>⬇ নিচে (Bottom)</span>
                         </button>
 
                         {/* Ban / Unban User Button */}
@@ -1497,7 +1645,11 @@ export default function AdminPanel({
                                   avatar ? (
                                     <img src={avatar} alt="User" referrerPolicy="no-referrer" className="w-7 h-7 rounded-full object-cover border border-white/20 shadow-sm" />
                                   ) : (
-                                    <div className="w-7 h-7 rounded-full bg-cyan-500/20 border border-cyan-500/30 text-cyan-300 flex items-center justify-center text-[10px] font-black">
+                                    <div className={`w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-black border ${
+                                      currentThread.isBanned 
+                                        ? 'bg-rose-500/20 border-rose-500/30 text-rose-300' 
+                                        : 'bg-cyan-500/20 border-cyan-500/30 text-cyan-300'
+                                    }`}>
                                       {currentThread.userName.charAt(0).toUpperCase()}
                                     </div>
                                   )
@@ -1506,7 +1658,7 @@ export default function AdminPanel({
 
                               <div className={`flex flex-col ${isAdmin ? 'items-end' : 'items-start'} max-w-[85%]`}>
                                 <div className="flex items-center gap-2 mb-1 px-1">
-                                  <span className={`text-[10px] font-bold ${isAdmin ? 'text-emerald-400' : 'text-cyan-400'}`}>
+                                  <span className={`text-[10px] font-bold ${isAdmin ? 'text-emerald-400' : currentThread.isBanned ? 'text-rose-400' : 'text-cyan-400'}`}>
                                     {isAdmin ? 'অ্যাডমিন (আপনি)' : (msg.senderName || currentThread.userName)}
                                   </span>
                                   <span className="text-[9px] text-white/30 font-mono">
@@ -1517,7 +1669,9 @@ export default function AdminPanel({
                                 <div className={`p-3.5 rounded-2xl text-xs leading-relaxed break-words shadow-md ${
                                   isAdmin
                                     ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-tr-sm'
-                                    : 'bg-white/10 border border-white/10 text-white rounded-tl-sm'
+                                    : currentThread.isBanned
+                                      ? 'bg-rose-950/60 border border-rose-500/40 text-rose-100 rounded-tl-sm'
+                                      : 'bg-white/10 border border-white/10 text-white rounded-tl-sm'
                                 }`}>
                                   {/* Image attachment if user uploaded photo / screenshot */}
                                   {msg.imageUrl && (
@@ -1550,12 +1704,17 @@ export default function AdminPanel({
                     {/* Quick Reply Suggestion Chips */}
                     <div className="px-4 py-2 bg-black/40 border-t border-white/5 flex gap-2 overflow-x-auto scrollbar-none shrink-0">
                       <span className="text-[10px] text-white/40 font-bold self-center shrink-0">কুইক রিপ্লাই:</span>
-                      {[
+                      {(currentThread.isBanned ? [
+                        'আপনার আবেদন পর্যালোচনা করা হচ্ছে, অনুগ্রহ করে অপেক্ষা করুন।',
+                        'সঠিক তথ্য দেওয়ার জন্য ধন্যবাদ, আপনার অ্যাকাউন্ট আনব্যান করা হয়েছে!',
+                        'নিরাপত্তা নীতি লঙ্ঘনের কারণে অ্যাকাউন্টটি সাময়িকভাবে স্থগিত রাখা হয়েছে।',
+                        'জরুরি সহায়তার জন্য আমাদের অফিসিয়াল নম্বরে কল দিন।'
+                      ] : [
                         'আপনার অর্ডারটি সফলভাবে সম্পন্ন হয়েছে, ওয়ালেট চেক করুন!',
                         'পেমেন্ট ভেরিফাই করা হচ্ছে, ৫ মিনিট অপেক্ষা করুন।',
                         'দয়া করে সঠিক ট্রানজেকশন আইডি (TxID) দিন।',
                         'জরুরি প্রয়োজনে আমাদের হোয়াটসঅ্যাপ নম্বরে মেসেজ দিন।'
-                      ].map((chipText, i) => (
+                      ]).map((chipText, i) => (
                         <button
                           key={i}
                           type="button"
