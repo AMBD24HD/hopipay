@@ -126,10 +126,20 @@ export default function AdminPanel({
     setSettingsForm(adminSettings);
   }, [adminSettings]);
 
+  // Page level scroll helpers
+  const scrollPageToTop = () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const scrollPageToBottom = () => {
+    window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+  };
+
   // Chat scroll helpers (Right message pane)
   const scrollChatToTop = () => {
     if (chatMessagesContainerRef.current) {
       chatMessagesContainerRef.current.scrollTo({ top: 0, behavior: 'smooth' });
+      chatMessagesContainerRef.current.scrollTop = 0;
     }
   };
 
@@ -139,14 +149,16 @@ export default function AdminPanel({
         top: chatMessagesContainerRef.current.scrollHeight,
         behavior: 'smooth'
       });
+      chatMessagesContainerRef.current.scrollTop = chatMessagesContainerRef.current.scrollHeight;
     }
-    chatMessagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    chatMessagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
   };
 
   // User List scroll helpers (Left sidebar pane)
   const scrollUserListToTop = () => {
     if (userListContainerRef.current) {
       userListContainerRef.current.scrollTo({ top: 0, behavior: 'smooth' });
+      userListContainerRef.current.scrollTop = 0;
     }
   };
 
@@ -156,6 +168,7 @@ export default function AdminPanel({
         top: userListContainerRef.current.scrollHeight,
         behavior: 'smooth'
       });
+      userListContainerRef.current.scrollTop = userListContainerRef.current.scrollHeight;
     }
   };
 
@@ -1338,7 +1351,7 @@ export default function AdminPanel({
               {/* User Threads List Container */}
               <div 
                 ref={userListContainerRef}
-                className="flex-1 overflow-y-auto divide-y divide-white/5 scrollbar-thin scrollbar-thumb-white/10"
+                className="min-h-0 flex-1 overflow-y-auto divide-y divide-white/5 scrollbar-thin scrollbar-thumb-white/20 overscroll-contain"
               >
                 {(() => {
                   const filteredThreads = userThreads
@@ -1618,7 +1631,7 @@ export default function AdminPanel({
                     {/* Messages Body */}
                     <div 
                       ref={chatMessagesContainerRef}
-                      className="flex-1 p-5 overflow-y-auto space-y-3.5 scrollbar-thin scrollbar-thumb-white/10 relative"
+                      className="min-h-0 flex-1 p-5 overflow-y-auto space-y-3.5 scrollbar-thin scrollbar-thumb-white/20 overscroll-contain relative"
                     >
                       {currentThreadMessages.length === 0 ? (
                         <div className="text-center text-white/40 py-24 space-y-2">
@@ -2386,28 +2399,83 @@ export default function AdminPanel({
               </div>
             </div>
 
-            {/* Announcement Notice & WhatsApp */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-1.5 md:col-span-2">
-                <label className="text-xs font-bold text-white/80">নোটিশ / ঘোষণা বার্তা (স্ক্রল ব্যানার)</label>
-                <textarea
-                  rows={2}
-                  value={settingsForm.notice}
-                  onChange={(e) => setSettingsForm({ ...settingsForm, notice: e.target.value })}
-                  className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white text-xs leading-relaxed focus:border-emerald-500 focus:outline-none"
-                />
+            {/* Support & Info Section Settings (সহায়তা ও তথ্য কনফিগারেশন) */}
+            <div className="p-5 rounded-2xl bg-black/40 border border-white/10 space-y-4">
+              <div>
+                <h4 className="text-sm font-black text-emerald-400 uppercase tracking-wider flex items-center gap-2">
+                  <Phone className="w-4 h-4" /> সহায়তা ও তথ্য কনফিগারেশন (Support & Info Settings)
+                </h4>
+                <p className="text-xs text-white/50 mt-1">
+                  হোমপেজে প্রদর্শিত অপারেশন সময়, হেল্পলাইন ও সাপোর্ট নম্বর, হোয়াটসঅ্যাপ এবং সাপোর্ট ইমেইল কনফিগার করুন।
+                </p>
               </div>
 
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-white/80">হোয়াটসঅ্যাপ নম্বর (কান্ট্রি কোড সহ)</label>
-                <input
-                  type="text"
-                  placeholder="8801700000000"
-                  value={settingsForm.whatsapp}
-                  onChange={(e) => setSettingsForm({ ...settingsForm, whatsapp: e.target.value })}
-                  className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white text-sm font-mono focus:border-emerald-500 focus:outline-none"
-                />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-white/80 flex items-center gap-1.5">
+                    <Calendar className="w-3.5 h-3.5 text-emerald-400" /> অপারেশন সময় (Operation Hours)
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="সকাল ১০:০০ টা থেকে রাত ১০:০০ টা (প্রতিদিন)"
+                    value={settingsForm.operationHours || ''}
+                    onChange={(e) => setSettingsForm({ ...settingsForm, operationHours: e.target.value })}
+                    className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white text-sm font-bold focus:border-emerald-500 focus:outline-none"
+                  />
+                  <span className="text-[10px] text-white/40">ডিফল্ট: সকাল ১০:০০ টা থেকে রাত ১০:০০ টা (প্রতিদিন)</span>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-white/80 flex items-center gap-1.5">
+                    <Phone className="w-3.5 h-3.5 text-teal-400" /> হেল্পলাইন ও সাপোর্ট নম্বর (Helpline Phone)
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="01604366679"
+                    value={settingsForm.supportPhone || ''}
+                    onChange={(e) => setSettingsForm({ ...settingsForm, supportPhone: e.target.value })}
+                    className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-emerald-400 font-mono text-sm font-black focus:border-emerald-500 focus:outline-none"
+                  />
+                  <span className="text-[10px] text-white/40">ডিফল্ট: 01604366679</span>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-white/80 flex items-center gap-1.5">
+                    <MessageCircle className="w-3.5 h-3.5 text-rose-400" /> হোয়াটসঅ্যাপ নম্বর (WhatsApp Number)
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="8801604366679"
+                    value={settingsForm.whatsapp}
+                    onChange={(e) => setSettingsForm({ ...settingsForm, whatsapp: e.target.value })}
+                    className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white text-sm font-mono focus:border-emerald-500 focus:outline-none"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-white/80 flex items-center gap-1.5">
+                    <Mail className="w-3.5 h-3.5 text-cyan-400" /> সাপোর্ট ইমেইল (Support Email)
+                  </label>
+                  <input
+                    type="email"
+                    placeholder="support@velopay.com"
+                    value={settingsForm.supportEmail || ''}
+                    onChange={(e) => setSettingsForm({ ...settingsForm, supportEmail: e.target.value })}
+                    className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white text-sm font-mono focus:border-emerald-500 focus:outline-none"
+                  />
+                </div>
               </div>
+            </div>
+
+            {/* Announcement Notice */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-white/80">নোটিশ / ঘোষণা বার্তা (স্ক্রল ব্যানার)</label>
+              <textarea
+                rows={2}
+                value={settingsForm.notice}
+                onChange={(e) => setSettingsForm({ ...settingsForm, notice: e.target.value })}
+                className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white text-xs leading-relaxed focus:border-emerald-500 focus:outline-none"
+              />
             </div>
 
             {/* Admin Portal Credentials (Email + Password + PIN) */}
@@ -2496,6 +2564,25 @@ export default function AdminPanel({
           </div>
         </div>
       )}
+      {/* Admin Panel Floating Scroll Top/Bottom Action Widget */}
+      <div className="fixed bottom-6 right-6 z-50 flex flex-col gap-2 pointer-events-auto">
+        <button
+          type="button"
+          onClick={scrollPageToTop}
+          title="প্যানেলের একদম উপরে যান"
+          className="w-10 h-10 rounded-2xl bg-[#0c1422]/90 hover:bg-emerald-500 border border-emerald-500/40 text-emerald-300 hover:text-white flex items-center justify-center transition-all shadow-xl shadow-black/80 cursor-pointer active:scale-90"
+        >
+          <ChevronUp className="w-5 h-5" />
+        </button>
+        <button
+          type="button"
+          onClick={scrollPageToBottom}
+          title="প্যানেলের একদম নিচে যান"
+          className="w-10 h-10 rounded-2xl bg-[#0c1422]/90 hover:bg-emerald-500 border border-emerald-500/40 text-emerald-300 hover:text-white flex items-center justify-center transition-all shadow-xl shadow-black/80 cursor-pointer active:scale-90"
+        >
+          <ChevronDown className="w-5 h-5" />
+        </button>
+      </div>
     </div>
   );
 }

@@ -52,6 +52,9 @@ export interface AdminSettings {
   nagadLogo?: string;       // Custom Nagad logo URL
   siteLogo?: string;        // Site logo picture (shows next to Velopay & time)
   siteFavicon?: string;     // Browser favicon URL
+  operationHours?: string;  // e.g. "সকাল ১০:০০ টা থেকে রাত ১০:০০ টা (প্রতিদিন)"
+  supportPhone?: string;    // e.g. "01604366679"
+  supportEmail?: string;    // e.g. "support@velopay.com"
   totalExchangedUSD: number;
   activeUsersCount: number;
   adminPin?: string;        // Security PIN for admin panel (e.g. 1234)
