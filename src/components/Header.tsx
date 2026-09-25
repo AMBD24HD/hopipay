@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Bolt, User as UserIcon, LogIn, Clock, Home, RefreshCw, History, Ban, LogOut } from 'lucide-react';
+import { Bolt, User as UserIcon, LogIn, Clock, Home, RefreshCw, History, Ban, LogOut, ShieldCheck } from 'lucide-react';
 import { User } from '../types';
 
 interface HeaderProps {
@@ -12,6 +12,7 @@ interface HeaderProps {
   checkAuthAndShow: (targetView: 'order' | 'order-list' | 'profile') => void;
   isBanned?: boolean;
   onSignOut?: () => void;
+  onOpenAdmin: () => void;
 }
 
 export default function Header({ 
@@ -23,7 +24,8 @@ export default function Header({
   setView, 
   checkAuthAndShow,
   isBanned = false,
-  onSignOut
+  onSignOut,
+  onOpenAdmin
 }: HeaderProps) {
   const [timeStr, setTimeStr] = useState<string>('সময়...');
   const [greeting, setGreeting] = useState<string>('শুভ দিন!');
