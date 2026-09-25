@@ -1490,7 +1490,7 @@ export default function AdminPanel({
 
                           <div className="flex items-center justify-between gap-1">
                             <p className="text-[11px] text-white/60 truncate flex-1">
-                              {thread.lastMessage ? thread.lastMessage.text : 'চ্যাট শুরু করুন...'}
+                              {thread.lastMessage ? (thread.lastMessage.text && thread.lastMessage.text !== '📷 ছবি/স্ক্রিনশট' ? thread.lastMessage.text : '📷 ছবি') : 'চ্যাট শুরু করুন...'}
                             </p>
                             {thread.unreadCount > 0 && (
                               <span className="px-1.5 py-0.5 rounded-full bg-rose-500 text-white text-[9px] font-black shrink-0">
@@ -1631,21 +1631,6 @@ export default function AdminPanel({
                           )}
                         </button>
 
-                        {/* Clear Chat Button */}
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (onClearUserChat) {
-                              onClearUserChat(currentThread.userId, currentThread.userEmail);
-                            }
-                          }}
-                          className="px-3 py-1.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-300 hover:text-white text-xs font-bold transition flex items-center gap-1.5 cursor-pointer active:scale-95"
-                          title="এই ইউজারের সাথে পূর্বের সব চ্যাট ক্লিয়ার করুন"
-                        >
-                          <Trash2 className="w-3.5 h-3.5 text-rose-400" />
-                          <span>চ্যাট ক্লিয়ার</span>
-                        </button>
-
                         {/* Copy User Email */}
                         <button
                           type="button"
@@ -1739,7 +1724,9 @@ export default function AdminPanel({
                                         </div>
                                       </div>
                                     )}
-                                    <p>{msg.text}</p>
+                                    {msg.text && msg.text !== '📷 ছবি/স্ক্রিনশট' && (
+                                      <p>{msg.text}</p>
+                                    )}
                                   </div>
                                 </div>
                               </div>
@@ -1797,10 +1784,10 @@ export default function AdminPanel({
                       ))}
                     </div>
 
-                    {/* Bottom Admin Reply Form with Scroll Up / Down Controls */}
+                    {/* Bottom Admin Reply Form with Scroll Up / Down Controls & Clear Chat */}
                     <div className="p-3 bg-black/70 border-t border-white/10 space-y-2 shrink-0">
-                      {/* Bottom Scroll Buttons Bar */}
-                      <div className="flex items-center justify-between gap-2 px-1">
+                      {/* Bottom Scroll & Clear Chat Bar */}
+                      <div className="flex items-center justify-between gap-2 px-1 flex-wrap">
                         <div className="flex items-center gap-1.5">
                           <button
                             type="button"
@@ -1823,9 +1810,26 @@ export default function AdminPanel({
                           </button>
                         </div>
 
-                        <span className="text-[10px] text-white/40 font-mono hidden sm:inline-block">
-                          {currentThread.userName} ({currentThreadMessages.length} টি মেসেজ)
-                        </span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] text-white/40 font-mono hidden sm:inline-block">
+                            {currentThread.userName} ({currentThreadMessages.length} টি মেসেজ)
+                          </span>
+
+                          {/* Clear Chat Button at Bottom */}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (onClearUserChat) {
+                                onClearUserChat(currentThread.userId, currentThread.userEmail);
+                              }
+                            }}
+                            className="px-2.5 py-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-300 hover:text-white text-[11px] font-bold transition flex items-center gap-1.5 cursor-pointer active:scale-95"
+                            title="এই ইউজারের সাথে পূর্বের সব চ্যাট ক্লিয়ার করুন"
+                          >
+                            <Trash2 className="w-3.5 h-3.5 text-rose-400" />
+                            <span>চ্যাট ক্লিয়ার</span>
+                          </button>
+                        </div>
                       </div>
 
                       <form onSubmit={handleSendReply} className="flex gap-2">

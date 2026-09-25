@@ -59,7 +59,7 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, showToast }:
 
         localStorage.setItem('velopay_user', JSON.stringify(userData));
         onAuthSuccess(userData);
-        showToast('Firebase-এ সফলভাবে অ্যাকাউন্ট তৈরি হয়েছে!', 'success');
+        showToast('সফলভাবে অ্যাকাউন্ট তৈরি হয়েছে!', 'success');
         onClose();
       } else {
         // Firebase User Login
@@ -76,7 +76,7 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, showToast }:
 
         localStorage.setItem('velopay_user', JSON.stringify(userData));
         onAuthSuccess(userData);
-        showToast('Firebase-এ সফলভাবে লগইন হয়েছে!', 'success');
+        showToast('সফলভাবে লগইন হয়েছে!', 'success');
         onClose();
       }
     } catch (err: any) {
@@ -127,7 +127,7 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, showToast }:
 
       localStorage.setItem('velopay_user', JSON.stringify(userData));
       onAuthSuccess(userData);
-      showToast(`Google (${user.email}) দিয়ে সফলভাবে লগইন হয়েছে!`, 'success');
+      showToast('সফলভাবে লগইন হয়েছে!', 'success');
       onClose();
     } catch (err: any) {
       console.error('Google Sign In Error:', err);
@@ -181,7 +181,7 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, showToast }:
                 {isSignUp ? 'নতুন অ্যাকাউন্ট খুলুন' : 'লগইন করুন'}
               </h2>
               <p className="text-xs text-white/50 mt-1 mb-6 font-medium">
-                {isSignUp ? 'Firebase Authentication-এ নতুন ইউজার তৈরি হবে' : 'আপনার ইমেইল ও পাসওয়ার্ড দিয়ে প্রবেশ করুন'}
+                {isSignUp ? 'আপনার প্রয়োজনীয় তথ্য দিয়ে অ্যাকাউন্ট তৈরি করুন' : 'আপনার ইমেইল ও পাসওয়ার্ড দিয়ে প্রবেশ করুন'}
               </p>
 
               <div className="space-y-3.5 text-left">
