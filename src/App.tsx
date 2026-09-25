@@ -44,6 +44,7 @@ import {
 import { 
   collection, 
   doc, 
+  getDoc,
   setDoc, 
   deleteDoc,
   onSnapshot 
@@ -166,14 +167,24 @@ export default function App() {
   // Realtime Firebase Auth & Firestore Sync
   useEffect(() => {
     // 1. Listen to Firebase Auth state
-    const unsubscribeAuth = onAuthStateChanged(auth, (fbUser) => {
+    const unsubscribeAuth = onAuthStateChanged(auth, async (fbUser) => {
       if (fbUser) {
+        let existingUser: User | null = null;
+        if (db) {
+          try {
+            const userDocSnap = await getDoc(doc(db, 'users', fbUser.uid));
+            if (userDocSnap.exists()) {
+              existingUser = userDocSnap.data() as User;
+            }
+          } catch (e) {}
+        }
+
         const u: User = {
           id: fbUser.uid,
-          name: fbUser.displayName || fbUser.email?.split('@')[0] || 'User',
+          name: existingUser?.name || fbUser.displayName || fbUser.email?.split('@')[0] || 'User',
           email: fbUser.email || '',
-          avatar: fbUser.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(fbUser.displayName || 'U')}&background=10b981&color=fff&bold=true`,
-          createdAt: new Date().toISOString()
+          avatar: existingUser?.avatar || fbUser.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(fbUser.displayName || 'U')}&background=10b981&color=fff&bold=true`,
+          createdAt: existingUser?.createdAt || new Date().toISOString()
         };
         setCurrentUser(u);
         localStorage.setItem('velopay_user', JSON.stringify(u));
@@ -553,11 +564,18 @@ export default function App() {
     setView('home');
   };
 
-  const handleUpdateAvatar = (avatarUrl: string) => {
+  const handleUpdateAvatar = async (avatarUrl: string) => {
     if (!currentUser) return;
     const updatedUser: User = { ...currentUser, avatar: avatarUrl };
     setCurrentUser(updatedUser);
     localStorage.setItem('velopay_user', JSON.stringify(updatedUser));
+    if (db && currentUser.id) {
+      try {
+        await setDoc(doc(db, 'users', currentUser.id), cleanForFirestore(updatedUser), { merge: true });
+      } catch (e) {
+        console.warn('Sync avatar to firestore:', e);
+      }
+    }
   };
 
   const checkAuthAndShow = (targetView: 'order' | 'order-list' | 'profile' | 'admin') => {
