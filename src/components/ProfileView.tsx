@@ -366,7 +366,7 @@ export default function ProfileView({
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {orders.length === 0 ? (
-              <div className="col-span-full py-14 text-center ios-glass rounded-[24px] border border-emerald-500/15 bg-[#070e17]/80 space-y-3">
+              <div className="col-span-full py-14 px-4 min-h-[260px] flex flex-col items-center justify-center text-center ios-glass rounded-[24px] border border-emerald-500/15 bg-[#070e17]/80 space-y-3">
                 <Package className="w-10 h-10 text-white/20 mx-auto" />
                 <p className="text-sm font-semibold text-white/40">আপনি এখনো কোনো অর্ডার করেননি</p>
                 <p className="text-xs text-white/30 max-w-xs mx-auto">
