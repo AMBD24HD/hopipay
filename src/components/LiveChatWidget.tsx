@@ -356,6 +356,28 @@ export default function LiveChatWidget({
                   );
                 })}
                 <div ref={messagesEndRef} />
+
+                {/* In-Chat Quick Scroll Buttons Capsule */}
+                <div className="sticky bottom-2 right-2 flex justify-end gap-1.5 z-10 pointer-events-none">
+                  <div className="pointer-events-auto flex items-center gap-1 bg-[#08121a]/90 backdrop-blur-md p-1 rounded-xl border border-white/10 shadow-lg">
+                    <button
+                      type="button"
+                      onClick={scrollToTop}
+                      title="উপরে যান"
+                      className="p-1 rounded-lg bg-white/5 hover:bg-emerald-500/30 text-white/80 hover:text-white transition active:scale-95 cursor-pointer text-[10px] flex items-center gap-0.5"
+                    >
+                      <ChevronUp className="w-3.5 h-3.5 text-emerald-400" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={scrollToBottom}
+                      title="নিচে যান"
+                      className="p-1 rounded-lg bg-white/5 hover:bg-emerald-500/30 text-white/80 hover:text-white transition active:scale-95 cursor-pointer text-[10px] flex items-center gap-0.5"
+                    >
+                      <ChevronDown className="w-3.5 h-3.5 text-emerald-400" />
+                    </button>
+                  </div>
+                </div>
               </div>
 
               {/* Hidden File Picker for Image Upload */}
