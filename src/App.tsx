@@ -1268,7 +1268,7 @@ export default function App() {
                           onClick={() => {
                             if (!currentUser) {
                               setIsAuthOpen(true);
-                              showToast('লাইভ চ্যাট ব্যবহারের জন্য আগে লগইন করুন!', 'info');
+                              showToast(isCurrentUserBanned ? 'লাইভ চ্যাট ব্যবহারের জন্য আগে লগইন করুন!' : 'অ্যাডমিন সাপোর্ট ব্যবহারের জন্য আগে লগইন করুন!', 'info');
                             } else {
                               setIsChatOpen(true);
                             }
@@ -1276,7 +1276,7 @@ export default function App() {
                           className="py-2.5 px-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-white font-bold text-xs transition flex items-center justify-center gap-1.5 shadow-md shadow-emerald-950 cursor-pointer active:scale-95"
                         >
                           <Headphones className="w-3.5 h-3.5" />
-                          <span>লাইভ চ্যাট</span>
+                          <span>{isCurrentUserBanned ? 'লাইভ চ্যাট' : 'অ্যাডমিন সাপোর্ট'}</span>
                         </button>
 
                         <a

@@ -106,9 +106,12 @@ export default function AdminPanel({
   const [chatSearchQuery, setChatSearchQuery] = useState('');
   const [chatCategoryFilter, setChatCategoryFilter] = useState<'all' | 'live' | 'banned'>('all');
   const [previewModalUrl, setPreviewModalUrl] = useState<string | null>(null);
+  const [showScrollBottomBtn, setShowScrollBottomBtn] = useState(false);
+  const [showScrollTopBtn, setShowScrollTopBtn] = useState(false);
   const chatMessagesContainerRef = useRef<HTMLDivElement>(null);
   const chatMessagesEndRef = useRef<HTMLDivElement>(null);
   const userListContainerRef = useRef<HTMLDivElement>(null);
+  const prevSelectedUserRef = useRef<string | null>(null);
 
   // Users Tab states
   const [userSearchQuery, setUserSearchQuery] = useState('');
@@ -145,13 +148,24 @@ export default function AdminPanel({
 
   const scrollChatToBottom = () => {
     if (chatMessagesContainerRef.current) {
+      const scrollHeight = chatMessagesContainerRef.current.scrollHeight;
       chatMessagesContainerRef.current.scrollTo({
-        top: chatMessagesContainerRef.current.scrollHeight,
+        top: scrollHeight,
         behavior: 'smooth'
       });
-      chatMessagesContainerRef.current.scrollTop = chatMessagesContainerRef.current.scrollHeight;
+      chatMessagesContainerRef.current.scrollTop = scrollHeight;
     }
     chatMessagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+  };
+
+  // Chat messages container scroll listener
+  const handleChatScroll = () => {
+    const el = chatMessagesContainerRef.current;
+    if (!el) return;
+    const { scrollTop, scrollHeight, clientHeight } = el;
+    const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
+    setShowScrollBottomBtn(distanceFromBottom > 120);
+    setShowScrollTopBtn(scrollTop > 100);
   };
 
   // User List scroll helpers (Left sidebar pane)
@@ -164,11 +178,12 @@ export default function AdminPanel({
 
   const scrollUserListToBottom = () => {
     if (userListContainerRef.current) {
+      const scrollHeight = userListContainerRef.current.scrollHeight;
       userListContainerRef.current.scrollTo({
-        top: userListContainerRef.current.scrollHeight,
+        top: scrollHeight,
         behavior: 'smooth'
       });
-      userListContainerRef.current.scrollTop = userListContainerRef.current.scrollHeight;
+      userListContainerRef.current.scrollTop = scrollHeight;
     }
   };
 
@@ -371,10 +386,27 @@ export default function AdminPanel({
     }
   }, [selectedChatUserId, userThreads]);
 
-  // Auto-scroll to bottom of chat when messages change
+  // Auto-scroll to bottom of chat when user switches or when near bottom
   useEffect(() => {
-    if (activeTab === 'chat') {
-      chatMessagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (activeTab !== 'chat') return;
+
+    // If user changed, scroll to bottom immediately
+    if (prevSelectedUserRef.current !== selectedChatUserId) {
+      prevSelectedUserRef.current = selectedChatUserId;
+      if (chatMessagesContainerRef.current) {
+        chatMessagesContainerRef.current.scrollTop = chatMessagesContainerRef.current.scrollHeight;
+      }
+      chatMessagesEndRef.current?.scrollIntoView({ behavior: 'auto' });
+      return;
+    }
+
+    // When new message arrives, only auto-scroll if already near bottom (< 150px)
+    if (chatMessagesContainerRef.current) {
+      const el = chatMessagesContainerRef.current;
+      const isNearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 150;
+      if (isNearBottom) {
+        chatMessagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+      }
     }
   }, [activeTab, chatMessages, selectedChatUserId]);
 
@@ -1629,89 +1661,119 @@ export default function AdminPanel({
                     </div>
 
                     {/* Messages Body */}
-                    <div 
-                      ref={chatMessagesContainerRef}
-                      className="min-h-0 flex-1 p-5 overflow-y-auto space-y-3.5 scrollbar-thin scrollbar-thumb-white/20 overscroll-contain relative"
-                    >
-                      {currentThreadMessages.length === 0 ? (
-                        <div className="text-center text-white/40 py-24 space-y-2">
-                          <Sparkles className="w-10 h-10 mx-auto text-emerald-400/40" />
-                          <p className="text-sm font-bold text-white/70">{currentThread.userName}-এর সাথে কোনো মেসেজ হিস্ট্রি নেই</p>
-                          <p className="text-xs text-white/40">নিচের বক্সে মেসেজ লিখে সরাসরি এই ইউজারকে পাঠান।</p>
-                        </div>
-                      ) : (
-                        currentThreadMessages.map((msg) => {
-                          const isAdmin = msg.sender === 'admin';
-                          const avatar = msg.userAvatar || currentThread.userAvatar;
-                          return (
-                            <div
-                              key={msg.id}
-                              className={`flex items-start gap-2.5 ${isAdmin ? 'flex-row-reverse' : 'flex-row'}`}
-                            >
-                              {/* Avatar beside message */}
-                              <div className="shrink-0 mt-1">
-                                {isAdmin ? (
-                                  <div className="w-7 h-7 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 flex items-center justify-center text-xs font-black shadow-sm">
-                                    👑
-                                  </div>
-                                ) : (
-                                  avatar ? (
-                                    <img src={avatar} alt="User" referrerPolicy="no-referrer" className="w-7 h-7 rounded-full object-cover border border-white/20 shadow-sm" />
+                    <div className="relative min-h-0 flex-1 flex flex-col overflow-hidden">
+                      <div 
+                        ref={chatMessagesContainerRef}
+                        onScroll={handleChatScroll}
+                        className="min-h-0 flex-1 p-5 overflow-y-auto space-y-3.5 scrollbar-thin scrollbar-thumb-white/20 overscroll-contain relative focus:outline-none"
+                        tabIndex={0}
+                      >
+                        {currentThreadMessages.length === 0 ? (
+                          <div className="text-center text-white/40 py-24 space-y-2">
+                            <Sparkles className="w-10 h-10 mx-auto text-emerald-400/40" />
+                            <p className="text-sm font-bold text-white/70">{currentThread.userName}-এর সাথে কোনো মেসেজ হিস্ট্রি নেই</p>
+                            <p className="text-xs text-white/40">নিচের বক্সে মেসেজ লিখে সরাসরি এই ইউজারকে পাঠান।</p>
+                          </div>
+                        ) : (
+                          currentThreadMessages.map((msg) => {
+                            const isAdmin = msg.sender === 'admin';
+                            const avatar = msg.userAvatar || currentThread.userAvatar;
+                            return (
+                              <div
+                                key={msg.id}
+                                className={`flex items-start gap-2.5 ${isAdmin ? 'flex-row-reverse' : 'flex-row'}`}
+                              >
+                                {/* Avatar beside message */}
+                                <div className="shrink-0 mt-1">
+                                  {isAdmin ? (
+                                    <div className="w-7 h-7 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 flex items-center justify-center text-xs font-black shadow-sm">
+                                      👑
+                                    </div>
                                   ) : (
-                                    <div className={`w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-black border ${
-                                      currentThread.isBanned 
-                                        ? 'bg-rose-500/20 border-rose-500/30 text-rose-300' 
-                                        : 'bg-cyan-500/20 border-cyan-500/30 text-cyan-300'
-                                    }`}>
-                                      {currentThread.userName.charAt(0).toUpperCase()}
-                                    </div>
-                                  )
-                                )}
-                              </div>
-
-                              <div className={`flex flex-col ${isAdmin ? 'items-end' : 'items-start'} max-w-[85%]`}>
-                                <div className="flex items-center gap-2 mb-1 px-1">
-                                  <span className={`text-[10px] font-bold ${isAdmin ? 'text-emerald-400' : currentThread.isBanned ? 'text-rose-400' : 'text-cyan-400'}`}>
-                                    {isAdmin ? 'অ্যাডমিন (আপনি)' : (msg.senderName || currentThread.userName)}
-                                  </span>
-                                  <span className="text-[9px] text-white/30 font-mono">
-                                    {new Date(msg.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                  </span>
-                                </div>
-
-                                <div className={`p-3.5 rounded-2xl text-xs leading-relaxed break-words shadow-md ${
-                                  isAdmin
-                                    ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-tr-sm'
-                                    : currentThread.isBanned
-                                      ? 'bg-rose-950/60 border border-rose-500/40 text-rose-100 rounded-tl-sm'
-                                      : 'bg-white/10 border border-white/10 text-white rounded-tl-sm'
-                                }`}>
-                                  {/* Image attachment if user uploaded photo / screenshot */}
-                                  {msg.imageUrl && (
-                                    <div 
-                                      onClick={() => setPreviewModalUrl(msg.imageUrl!)}
-                                      className="mb-2 rounded-xl overflow-hidden border border-white/20 relative group cursor-pointer max-w-[240px]"
-                                      title="ছবি বড় করে দেখতে ক্লিক করুন"
-                                    >
-                                      <img 
-                                        src={msg.imageUrl} 
-                                        alt="Attachment" 
-                                        referrerPolicy="no-referrer"
-                                        className="w-full max-h-48 object-cover transition-transform group-hover:scale-105" 
-                                      />
-                                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition">
-                                        <ZoomIn className="w-5 h-5 text-white" />
+                                    avatar ? (
+                                      <img src={avatar} alt="User" referrerPolicy="no-referrer" className="w-7 h-7 rounded-full object-cover border border-white/20 shadow-sm" />
+                                    ) : (
+                                      <div className={`w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-black border ${
+                                        currentThread.isBanned 
+                                          ? 'bg-rose-500/20 border-rose-500/30 text-rose-300' 
+                                          : 'bg-cyan-500/20 border-cyan-500/30 text-cyan-300'
+                                      }`}>
+                                        {currentThread.userName.charAt(0).toUpperCase()}
                                       </div>
-                                    </div>
+                                    )
                                   )}
-                                  <p>{msg.text}</p>
+                                </div>
+
+                                <div className={`flex flex-col ${isAdmin ? 'items-end' : 'items-start'} max-w-[85%]`}>
+                                  <div className="flex items-center gap-2 mb-1 px-1">
+                                    <span className={`text-[10px] font-bold ${isAdmin ? 'text-emerald-400' : currentThread.isBanned ? 'text-rose-400' : 'text-cyan-400'}`}>
+                                      {isAdmin ? 'অ্যাডমিন (আপনি)' : (msg.senderName || currentThread.userName)}
+                                    </span>
+                                    <span className="text-[9px] text-white/30 font-mono">
+                                      {new Date(msg.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                    </span>
+                                  </div>
+
+                                  <div className={`p-3.5 rounded-2xl text-xs leading-relaxed break-words shadow-md ${
+                                    isAdmin
+                                      ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-tr-sm'
+                                      : currentThread.isBanned
+                                        ? 'bg-rose-950/60 border border-rose-500/40 text-rose-100 rounded-tl-sm'
+                                        : 'bg-white/10 border border-white/10 text-white rounded-tl-sm'
+                                  }`}>
+                                    {/* Image attachment if user uploaded photo / screenshot */}
+                                    {msg.imageUrl && (
+                                      <div 
+                                        onClick={() => setPreviewModalUrl(msg.imageUrl!)}
+                                        className="mb-2 rounded-xl overflow-hidden border border-white/20 relative group cursor-pointer max-w-[240px]"
+                                        title="ছবি বড় করে দেখতে ক্লিক করুন"
+                                      >
+                                        <img 
+                                          src={msg.imageUrl} 
+                                          alt="Attachment" 
+                                          referrerPolicy="no-referrer"
+                                          className="w-full max-h-48 object-cover transition-transform group-hover:scale-105" 
+                                        />
+                                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition">
+                                          <ZoomIn className="w-5 h-5 text-white" />
+                                        </div>
+                                      </div>
+                                    )}
+                                    <p>{msg.text}</p>
+                                  </div>
                                 </div>
                               </div>
-                            </div>
-                          );
-                        })
+                            );
+                          })
+                        )}
+                        <div ref={chatMessagesEndRef} />
+                      </div>
+
+                      {/* Floating In-Chat Jump-to-Top Button */}
+                      {showScrollTopBtn && (
+                        <button
+                          type="button"
+                          onClick={scrollChatToTop}
+                          title="চ্যাটের একদম শুরুতে যান"
+                          className="absolute top-3 right-4 z-20 px-3 py-1.5 rounded-full bg-[#0a1826]/90 hover:bg-emerald-600 text-emerald-300 hover:text-white text-[11px] font-bold shadow-xl border border-emerald-500/40 backdrop-blur-md flex items-center gap-1.5 transition-all duration-200 active:scale-95 cursor-pointer"
+                        >
+                          <ChevronUp className="w-3.5 h-3.5" />
+                          <span>⬆ শুরুতে যান</span>
+                        </button>
                       )}
-                      <div ref={chatMessagesEndRef} />
+
+                      {/* Floating In-Chat Jump-to-Bottom Button */}
+                      {showScrollBottomBtn && (
+                        <button
+                          type="button"
+                          onClick={scrollChatToBottom}
+                          title="চ্যাটের নতুন মেসেজে যান"
+                          className="absolute bottom-3 right-4 z-20 px-3.5 py-1.5 rounded-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-[11px] font-black shadow-2xl border border-emerald-400/50 backdrop-blur-md flex items-center gap-1.5 transition-all duration-200 active:scale-95 cursor-pointer animate-bounce"
+                        >
+                          <ChevronDown className="w-3.5 h-3.5" />
+                          <span>⬇ নতুন মেসেজে যান</span>
+                        </button>
+                      )}
                     </div>
 
                     {/* Quick Reply Suggestion Chips */}
