@@ -357,7 +357,7 @@ export default function ProfileView({
 
       {/* 4. ORDERS LIST SECTION (When viewing in 'orders' mode or in 'all') */}
       {(mode === 'all' || mode === 'orders') && (
-        <div className="space-y-4 pt-2">
+        <div className={`space-y-4 ${mode === 'orders' ? 'ios-glass p-5 sm:p-7 rounded-[26px] border border-emerald-500/20 bg-[#070e17]/85 shadow-[0_10px_35px_rgba(0,0,0,0.5)]' : ''}`}>
           <div className="flex items-center justify-between border-b border-white/10 pb-3">
             <h3 className="text-lg sm:text-xl font-black text-white tracking-tight flex items-center gap-2">
               <Package className="w-5 h-5 text-emerald-400" /> অর্ডার হিস্ট্রি
@@ -366,10 +366,10 @@ export default function ProfileView({
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {orders.length === 0 ? (
-              <div className="col-span-full py-14 px-4 min-h-[260px] flex flex-col items-center justify-center text-center ios-glass rounded-[24px] border border-emerald-500/15 bg-[#070e17]/80 space-y-3">
+              <div className="col-span-full py-12 px-4 flex flex-col items-center justify-center text-center space-y-3">
                 <Package className="w-10 h-10 text-white/20 mx-auto" />
-                <p className="text-sm font-semibold text-white/40">আপনি এখনো কোনো অর্ডার করেননি</p>
-                <p className="text-xs text-white/30 max-w-xs mx-auto">
+                <p className="text-sm font-semibold text-white/60">আপনি এখনো কোনো অর্ডার করেননি</p>
+                <p className="text-xs text-white/40 max-w-xs mx-auto">
                   বাই-সেল শুরু করুন, আপনার সমস্ত অর্ডার হিস্ট্রি এখানে সংরক্ষিত থাকবে।
                 </p>
               </div>

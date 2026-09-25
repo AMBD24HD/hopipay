@@ -1067,10 +1067,10 @@ export default function App() {
             {view === 'home' && (
               <motion.div
                 key="home"
-                initial={{ opacity: 0, y: 15 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -15 }}
-                transition={{ duration: 0.3 }}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.15 }}
                 className="space-y-8 sm:space-y-12"
               >
                 {/* Prominent Offline Alert Banner if Admin turned site offline */}
@@ -1175,10 +1175,10 @@ export default function App() {
             {view === 'order' && (
               <motion.div
                 key="order"
-                initial={{ opacity: 0, y: 15 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -15 }}
-                transition={{ duration: 0.3 }}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.15 }}
                 className="max-w-3xl mx-auto"
               >
                 <OrderForm 
@@ -1196,11 +1196,11 @@ export default function App() {
             {view === 'order-list' && currentUser && (
               <motion.div
                 key="order-list"
-                initial={{ opacity: 0, y: 15 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -15 }}
-                transition={{ duration: 0.3 }}
-                className="max-w-4xl mx-auto"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.15 }}
+                className="max-w-2xl mx-auto"
               >
                 <ProfileView 
                   user={{ ...currentUser, isBanned: isCurrentUserBanned }} 
@@ -1220,10 +1220,10 @@ export default function App() {
             {view === 'profile' && currentUser && (
               <motion.div
                 key="profile"
-                initial={{ opacity: 0, y: 15 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -15 }}
-                transition={{ duration: 0.3 }}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.15 }}
                 className="max-w-4xl mx-auto"
               >
                 <ProfileView 
