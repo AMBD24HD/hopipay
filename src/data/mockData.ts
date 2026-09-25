@@ -149,7 +149,7 @@ export const INITIAL_CURRENCIES: Currency[] = [
 
 export const INITIAL_SETTINGS: AdminSettings = {
   online: true,
-  notice: 'Velopay-তে স্বাগতম। আমরা ৫-১০ মিনিটে নিরাপদভাবে ডলার বাই-সেল অর্ডার প্রসেস করি। কোনো সাহায্য লাগলে লাইভ চ্যাট বা হোয়াটসঅ্যাপ আইকনে ক্লিক করে সরাসরি যোগাযোগ করুন।',
+  notice: 'VeloxPay-তে স্বাগতম। আমরা ৫-১০ মিনিটে নিরাপদভাবে ডলার বাই-সেল অর্ডার প্রসেস করি। কোনো সাহায্য লাগলে লাইভ চ্যাট বা হোয়াটসঅ্যাপ আইকনে ক্লিক করে সরাসরি যোগাযোগ করুন।',
   whatsapp: '8801604366679',
   adminBkashNumber: '01711223344 (Bkash Personal)',
   adminNagadNumber: '01955667788 (Nagad Personal)',

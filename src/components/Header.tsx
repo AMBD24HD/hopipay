@@ -82,7 +82,7 @@ export default function Header({
             </div>
             <div>
               <div className="flex items-center gap-1.5">
-                <span className="text-base sm:text-lg font-black text-white tracking-tight leading-tight">Velopay</span>
+                <span className="text-base sm:text-lg font-black text-white tracking-tight leading-tight">VeloxPay</span>
               </div>
               <span className="text-[11px] font-black text-rose-400 flex items-center gap-1">
                 🚫 অ্যাকাউন্ট স্থগিত
@@ -130,7 +130,7 @@ export default function Header({
             {siteLogo ? (
               <img 
                 src={siteLogo} 
-                alt="Velopay" 
+                alt="VeloxPay" 
                 referrerPolicy="no-referrer"
                 className="w-full h-full object-cover" 
               />
@@ -140,7 +140,7 @@ export default function Header({
           </div>
           <div onClick={() => setView('home')} className="cursor-pointer">
             <div className="flex items-center gap-1.5">
-              <span className="text-base sm:text-lg font-black text-white tracking-tight leading-tight">Velopay</span>
+              <span className="text-base sm:text-lg font-black text-white tracking-tight leading-tight">VeloxPay</span>
               <span className="text-[10px] font-black text-emerald-400 uppercase tracking-widest hidden sm:inline-block font-sans">
                 • {greeting}
               </span>

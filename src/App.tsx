@@ -813,7 +813,7 @@ export default function App() {
                   <Shield className="w-8 h-8" />
                 </div>
                 <div>
-                  <h2 className="text-2xl font-black text-white tracking-tight">Velopay অ্যাডমিন পোর্টাল</h2>
+                  <h2 className="text-2xl font-black text-white tracking-tight">VeloxPay অ্যাডমিন পোর্টাল</h2>
                   <p className="text-xs text-white/60 mt-1 leading-relaxed">
                     এই প্যানেলটি শুধুমাত্র অনুমোদিত অ্যাডমিনের জন্য। আপনার Firebase কনসোলে সেট করা পাসওয়ার্ড দিয়ে লগইন করুন।
                   </p>
@@ -1096,7 +1096,7 @@ export default function App() {
                         {/* Text details - Pure Red Color Scheme */}
                         <div className="space-y-1.5">
                           <h4 className="text-sm sm:text-base font-black text-rose-400 tracking-tight">
-                            Velopay বর্তমানে অফলাইন রয়েছে (Offline)
+                            VeloxPay বর্তমানে অফলাইন রয়েছে (Offline)
                           </h4>
                           <p className="text-xs sm:text-sm text-rose-200/90 font-medium leading-relaxed">
                             অ্যাডমিন অফলাইনে থাকার কারণে নতুন অর্ডার প্রসেসিং সাময়িকভাবে স্থগিত আছে। অ্যাডমিন অনলাইনে আসলে পুনরায় অর্ডার করতে পারবেন।
@@ -1128,7 +1128,7 @@ export default function App() {
                       <ShieldCheck className="w-4 h-4" /> ১০০% নিরাপদ ও বিশ্বস্ত এক্সচেঞ্জ
                     </div>
                     <h1 className="text-4xl sm:text-5xl font-black text-white tracking-tight leading-none">
-                      Velopay — <span className="text-emerald-400">বাই ও সেল</span>
+                      VeloxPay — <span className="text-emerald-400">বাই ও সেল</span>
                     </h1>
                     <p className="text-sm sm:text-base text-white/70 font-medium leading-relaxed max-w-xl">
                       ফ্রিল্যান্সিং পেমেন্ট, ক্রিপ্টোকারেন্সি এবং ডিজিটাল ওয়ালেটের ডলার ৫-১০ মিনিটে বাংলাদেশি টাকায় বাই এবং সেল করুন সম্পূর্ণ বিশ্বস্ততার সাথে।
