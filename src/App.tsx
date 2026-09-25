@@ -61,16 +61,7 @@ import AdminPanel from './components/AdminPanel';
 import LiveChatWidget from './components/LiveChatWidget';
 
 export default function App() {
-  const [view, setView] = useState<'home' | 'order' | 'order-list' | 'profile' | 'admin'>(() => {
-    if (typeof window !== 'undefined') {
-      const hash = window.location.hash.toLowerCase();
-      const path = window.location.pathname.toLowerCase();
-      if (hash === '#admin' || hash === '#/admin' || hash === '#admin-portal' || path === '/admin' || path.endsWith('/admin')) {
-        return 'admin';
-      }
-    }
-    return 'home';
-  });
+  const [view, setView] = useState<'home' | 'order' | 'order-list' | 'profile' | 'admin'>('home');
 
   useEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
@@ -280,29 +271,6 @@ export default function App() {
     };
   }, []);
 
-  // Sync and listen to URL hash #admin or path /admin for separate Admin panel access
-  useEffect(() => {
-    const checkHash = () => {
-      const hash = window.location.hash.toLowerCase();
-      const path = window.location.pathname.toLowerCase();
-      if (hash === '#admin' || hash === '#/admin' || hash === '#admin-portal' || path === '/admin' || path.endsWith('/admin')) {
-        setView('admin');
-        const isAuth = sessionStorage.getItem('velopay_admin_auth') === 'true' || 
-                       sessionStorage.getItem('hopi_admin_auth') === 'true' ||
-                       localStorage.getItem('velopay_admin_auth') === 'true' ||
-                       localStorage.getItem('hopi_admin_auth') === 'true';
-        setIsAdminAuthenticated(isAuth);
-      }
-    };
-    checkHash();
-    window.addEventListener('hashchange', checkHash);
-    window.addEventListener('popstate', checkHash);
-    return () => {
-      window.removeEventListener('hashchange', checkHash);
-      window.removeEventListener('popstate', checkHash);
-    };
-  }, []);
-
   // Save orders to localStorage on change
   useEffect(() => {
     if (orders.length > 0) {
@@ -313,16 +281,10 @@ export default function App() {
   // Handle Admin Access Verification & Navigation
   const handleOpenAdmin = () => {
     setView('admin');
-    if (!window.location.hash.startsWith('#admin')) {
-      window.location.hash = 'admin';
-    }
   };
 
   const handleCloseAdmin = () => {
     setView('home');
-    if (window.location.hash.startsWith('#admin')) {
-      history.replaceState(null, '', window.location.pathname || '/');
-    }
   };
 
   const handleAdminLogout = () => {
@@ -335,9 +297,6 @@ export default function App() {
     localStorage.removeItem('velopay_admin_auth');
     localStorage.removeItem('hopi_admin_auth');
     setView('home');
-    if (window.location.hash.startsWith('#admin')) {
-      history.replaceState(null, '', window.location.pathname);
-    }
     showToast('অ্যাডমিন প্যানেল থেকে সফলভাবে লগআউট হয়েছেন!', 'info');
   };
 
@@ -346,41 +305,39 @@ export default function App() {
     const enteredEmail = adminEmailInput.trim().toLowerCase();
     const enteredPass = adminPasswordInput.trim();
 
-    if (!enteredEmail) {
-      showToast('অ্যাডমিন ইমেইল লিখুন!', 'error');
+    if (enteredEmail !== 'trxrafiff@gmail.com') {
+      showToast('অনুমোদিত নয়! শুধুমাত্র trxrafiff@gmail.com অ্যাডমিন হিসেবে লগইন করতে পারবে।', 'error');
+      return;
+    }
+
+    if (!enteredPass) {
+      showToast('অ্যাডমিন পাসওয়ার্ড লিখুন!', 'error');
       return;
     }
 
     setIsAdminLoading(true);
 
-    let firebaseSuccess = false;
     try {
-      if (enteredPass) {
-        // 1. Authenticate with real Firebase Authentication
-        await signInWithEmailAndPassword(auth, enteredEmail, enteredPass);
-        firebaseSuccess = true;
+      // Strictly authenticate with real Firebase Authentication
+      const userCredential = await signInWithEmailAndPassword(auth, enteredEmail, enteredPass);
+      const authEmail = userCredential.user.email?.toLowerCase();
+
+      if (authEmail === 'trxrafiff@gmail.com') {
+        setIsAdminAuthenticated(true);
+        sessionStorage.setItem('velopay_admin_auth', 'true');
+        localStorage.setItem('velopay_admin_auth', 'true');
+        setAdminPasswordInput('');
+        setView('admin');
+        showToast('অ্যাডমিন প্যানেলে সফলভাবে লগইন হয়েছে!', 'success');
+      } else {
+        await signOut(auth);
+        showToast('ফায়ারবেস অথেন্টিকেশন ব্যর্থ হয়েছে!', 'error');
       }
     } catch (firebaseErr: any) {
-      console.warn('Firebase email auth note:', firebaseErr.message || firebaseErr);
+      console.error('Admin Firebase auth error:', firebaseErr);
+      showToast('লগইন ব্যর্থ হয়েছে! সঠিক ফায়ারবেস পাসওয়ার্ড দিন।', 'error');
     } finally {
       setIsAdminLoading(false);
-    }
-
-    // Configured admin credentials & Owner verification
-    const correctEmail = (settings.adminEmail || 'trxrafiff@gmail.com').trim().toLowerCase();
-    const isOwner = enteredEmail === 'trxrafiff@gmail.com' || enteredEmail === correctEmail || enteredEmail === 'admin@velopay.com';
-    const isPassValid = !settings.adminPassword || enteredPass === settings.adminPassword || enteredPass === settings.adminPin || enteredPass === '1234' || firebaseSuccess;
-
-    if (isOwner || (firebaseSuccess && isOwner)) {
-      setIsAdminAuthenticated(true);
-      sessionStorage.setItem('velopay_admin_auth', 'true');
-      localStorage.setItem('velopay_admin_auth', 'true');
-      setAdminPasswordInput('');
-      setView('admin');
-      window.location.hash = 'admin';
-      showToast(`অ্যাডমিন প্যানেলে স্বাগতম! (${enteredEmail})`, 'success');
-    } else {
-      showToast('লগইন ব্যর্থ হয়েছে! অনুমোদিত অ্যাডমিন ইমেইল দিন (trxrafiff@gmail.com)', 'error');
     }
   };
 
@@ -389,18 +346,17 @@ export default function App() {
     try {
       const result = await signInWithPopup(auth, googleProvider);
       const authEmail = result.user.email?.toLowerCase();
-      const authorizedEmails = ['trxrafiff@gmail.com', 'admin@velopay.com', (settings.adminEmail || '').toLowerCase()];
 
-      if (authorizedEmails.includes(authEmail || '')) {
+      if (authEmail === 'trxrafiff@gmail.com') {
         setIsAdminAuthenticated(true);
         sessionStorage.setItem('velopay_admin_auth', 'true');
         localStorage.setItem('velopay_admin_auth', 'true');
         setAdminPasswordInput('');
         setView('admin');
-        window.location.hash = 'admin';
-        showToast(`Google অথেন্টিকেশন সফল! স্বাগতম অ্যাডমিন (${authEmail})`, 'success');
+        showToast('Google অথেন্টিকেশন সফল! স্বাগতম অ্যাডমিন (trxrafiff@gmail.com)', 'success');
       } else {
-        showToast(`অনুমোদন মেলেনি! (${authEmail}) অ্যাডমিন নয়। trxrafiff@gmail.com দিয়ে লগইন করুন।`, 'error');
+        await signOut(auth);
+        showToast('অনুমোদন মেলেনি! শুধুমাত্র trxrafiff@gmail.com অ্যাডমিন হতে পারবে।', 'error');
       }
     } catch (err: any) {
       console.error('Admin Google sign in error', err);
